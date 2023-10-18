@@ -29,6 +29,10 @@ module.exports = {
   ],
   rules: {
     '@typescript-eslint/no-unused-vars': 'warn',
+    "import/extensions": [
+        "error",
+        "ignorePackages"
+    ],
     "import/no-extraneous-dependencies": [
       "error",
       {
@@ -36,6 +40,13 @@ module.exports = {
       }
     ],
     "import/prefer-default-export": "off",
+    "max-len": [
+      "error",
+      {
+        "code": 120,
+        "ignoreComments": true,
+      }
+    ],
     'no-console': 'off',
   }
 }
