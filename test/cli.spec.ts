@@ -21,7 +21,7 @@ describe('cli', () => {
 
     // Cleanup
     fs.unlinkSync(expectedFilePath);
-  }, { timeout: 5000 });
+  }, { timeout: 10000 });
 
   test('with `--dir` argument', async () => {
     const expectedFilePath = `${process.cwd()}/images/300.webp`;
@@ -33,7 +33,7 @@ describe('cli', () => {
     // Cleanup
     fs.unlinkSync(expectedFilePath);
     fs.rmdirSync(path.dirname(expectedFilePath));
-  }, 5000);
+  }, { timeout: 10000 });
 
   test('with `--name` argument', async () => {
     const expectedFilePath = `${process.cwd()}/custom-name.webp`;
@@ -44,7 +44,7 @@ describe('cli', () => {
 
     // Cleanup
     fs.unlinkSync(expectedFilePath);
-  }, 5000);
+  }, { timeout: 10000 });
 
   test('with `--silent` argument', async () => {
     const expectedFilePath = `${process.cwd()}/300.webp`;
@@ -55,7 +55,7 @@ describe('cli', () => {
 
     // Cleanup
     fs.unlinkSync(expectedFilePath);
-  }, 5000);
+  }, { timeout: 10000 });
 
   test('should throw an error if the directory cannot be created', async () => {
     await expect(

@@ -11,15 +11,15 @@ export type DownloadOptions = {
    *
    * If not provided, the current working directory will be used.
    */
-  destination?: string;
+  directory?: string;
   /**
-   * The filename of the image.
+   * The name of the image file.
    *
    * If not provided, the filename of the URL will be used.
    *
    * If the URL doesn't have a filename with extension, the current timestamp will be used.
    */
-  filename?: string;
+  name?: string;
   /**
    * The extension of the image.
    *
@@ -34,17 +34,17 @@ export type DownloadOptions = {
  * Set the options with the default values if they are not provided.
  */
 export function getDownloadOptions(url: string, options?: DownloadOptions) {
-  let destination = options?.destination;
-  if (!destination || destination === '') {
-    destination = process.cwd();
+  let directory = options?.directory;
+  if (!directory || directory === '') {
+    directory = process.cwd();
   }
 
-  let filename = options?.filename;
-  if (!filename || filename === '') {
+  let name = options?.name;
+  if (!name || name === '') {
     if (path.extname(url) === '') {
-      filename = `${Date.now()}`;
+      name = `${Date.now()}`;
     } else {
-      filename = path.basename(url, path.extname(url));
+      name = path.basename(url, path.extname(url));
     }
   }
 
@@ -61,7 +61,7 @@ export function getDownloadOptions(url: string, options?: DownloadOptions) {
     throw new ArgumentError('Invalid `extension` value');
   }
 
-  return { destination, filename, extension };
+  return { directory, name, extension };
 }
 
 /**
@@ -73,21 +73,21 @@ export function getDownloadOptions(url: string, options?: DownloadOptions) {
  * @throws {FetchError} If the URL is invalid or the response is unsuccessful.
  */
 export async function download(url: string, options: DownloadOptions = {}) {
-  const { destination, filename, extension } = getDownloadOptions(url, options);
+  const { directory, name, extension } = getDownloadOptions(url, options);
 
   try {
     // Create the directory if it doesn't exist.
-    if (!fs.existsSync(destination)) {
-      fs.mkdirSync(destination, { recursive: true });
+    if (!fs.existsSync(directory)) {
+      fs.mkdirSync(directory, { recursive: true });
     }
   } catch (error) {
     if (error instanceof Error) {
       if (error.message.includes('EACCES')) {
-        throw new DirectoryError(`Permission denied to create '${destination}'`);
+        throw new DirectoryError(`Permission denied to create '${directory}'`);
       }
       throw new DirectoryError(error.message);
     } else {
-      throw new DirectoryError(`Failed to create '${destination}'`);
+      throw new DirectoryError(`Failed to create '${directory}'`);
     }
   }
 
@@ -117,17 +117,17 @@ export async function download(url: string, options: DownloadOptions = {}) {
     throw new FetchError('The response is not an image.');
   }
 
-  const filePath = path.join(destination, `${filename}.${extension}`);
+  const filePath = path.join(directory, `${name}.${extension}`);
   try {
     await pipeline(response.body, fs.createWriteStream(filePath));
   } catch (error) {
     if (error instanceof Error) {
       if (error.message.includes('EACCES')) {
-        throw new DirectoryError(`Permission denied to save image in '${destination}'`);
+        throw new DirectoryError(`Permission denied to save image in '${directory}'`);
       }
       throw new DirectoryError(error.message);
     } else {
-      throw new DirectoryError(`Failed to save image in '${destination}'`);
+      throw new DirectoryError(`Failed to save image in '${directory}'`);
     }
   }
 

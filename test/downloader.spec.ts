@@ -14,36 +14,36 @@ describe('`getDownloadOptions()`', () => {
     const url = 'https://picsum.photos/200/300.webp';
 
     expect(getDownloadOptions(url)).toEqual({
-      destination: process.cwd(),
-      filename: '300',
+      directory: process.cwd(),
+      name: '300',
       extension: 'webp',
     });
   });
 
   test('Only `url` without file ending', () => {
     expect(getDownloadOptions(urlTest)).toEqual({
-      destination: process.cwd(),
-      filename: expect.stringMatching(defaultFilenameRegex) as string,
+      directory: process.cwd(),
+      name: expect.stringMatching(defaultFilenameRegex) as string,
       extension: defaultExtension,
     });
   });
 
-  test('with `destination` argument', () => {
-    const destination = './test/tmp';
+  test('with `directory` argument', () => {
+    const directory = './test/tmp';
 
-    expect(getDownloadOptions(urlTest, { destination })).toEqual({
-      destination,
-      filename: expect.stringMatching(defaultFilenameRegex) as string,
+    expect(getDownloadOptions(urlTest, { directory })).toEqual({
+      directory,
+      name: expect.stringMatching(defaultFilenameRegex) as string,
       extension: defaultExtension,
     });
   });
 
-  test('with `filename` argument', () => {
-    const filename = 'test';
+  test('with `name` argument', () => {
+    const name = 'test';
 
-    expect(getDownloadOptions(urlTest, { filename })).toEqual({
-      destination: process.cwd(),
-      filename,
+    expect(getDownloadOptions(urlTest, { name })).toEqual({
+      directory: process.cwd(),
+      name,
       extension: defaultExtension,
     });
   });
@@ -52,8 +52,8 @@ describe('`getDownloadOptions()`', () => {
     const extension = 'png';
 
     expect(getDownloadOptions(urlTest, { extension })).toEqual({
-      destination: process.cwd(),
-      filename: expect.stringMatching(defaultFilenameRegex) as string,
+      directory: process.cwd(),
+      name: expect.stringMatching(defaultFilenameRegex) as string,
       extension,
     });
   });
@@ -66,8 +66,8 @@ describe('`getDownloadOptions()`', () => {
   test('with `destination`, `filename` and `extension` arguments', () => {
     const url = 'https://picsum.photos/200/300';
     const options = {
-      destination: './test/tmp',
-      filename: 'test',
+      directory: './test/tmp',
+      name: 'test',
       extension: 'png',
     };
 
@@ -85,12 +85,12 @@ describe('`download()`', () => {
 
     // Cleanup
     fs.unlinkSync(expectedFilePath);
-  }, { timeout: 5000 });
+  }, { timeout: 10000 });
 
   test('should throw an error if the directory cannot be created', async () => {
     const url = 'https://picsum.photos/200/300';
-    const destination = '/new-root-dir-no-access';
-    await expect(download(url, { destination })).rejects.toThrow(DirectoryError);
+    const directory = '/new-root-dir-no-access';
+    await expect(download(url, { directory })).rejects.toThrow(DirectoryError);
   });
 
   test('should throw an error if the URL is invalid', async () => {

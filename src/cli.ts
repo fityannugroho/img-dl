@@ -52,8 +52,8 @@ async function main() {
   }
 
   await imgdl(url, {
-    destination: flags.dir,
-    filename: flags.name,
+    directory: flags.dir,
+    name: flags.name,
     extension: flags.ext,
   });
 
