@@ -76,10 +76,13 @@ export async function download(url: string, options: DownloadOptions = {}) {
       fs.mkdirSync(destination, { recursive: true });
     }
   } catch (error) {
-    if (error instanceof Error && error.message.includes('EACCES')) {
-      throw new DirectoryError('Failed to create directory: Permission denied');
+    if (error instanceof Error) {
+      if (error.message.includes('EACCES')) {
+        throw new DirectoryError(`Permission denied to create '${destination}'`);
+      }
+      throw new DirectoryError(error.message);
     } else {
-      throw new DirectoryError('Failed to create directory');
+      throw new DirectoryError(`Failed to create '${destination}'`);
     }
   }
 
@@ -88,8 +91,8 @@ export async function download(url: string, options: DownloadOptions = {}) {
   try {
     response = await fetch(url);
   } catch (error) {
-    if (error instanceof TypeError) {
-      throw new FetchError('Invalid URL');
+    if (error instanceof Error) {
+      throw new FetchError(error.message);
     } else {
       throw new FetchError('Failed to fetch image');
     }
@@ -113,10 +116,13 @@ export async function download(url: string, options: DownloadOptions = {}) {
   try {
     await pipeline(response.body, fs.createWriteStream(filePath));
   } catch (error) {
-    if (error instanceof Error && error.message.includes('EACCES')) {
-      throw new DirectoryError('Failed to save image: Permission denied');
+    if (error instanceof Error) {
+      if (error.message.includes('EACCES')) {
+        throw new DirectoryError(`Permission denied to save image in '${destination}'`);
+      }
+      throw new DirectoryError(error.message);
     } else {
-      throw new DirectoryError('Failed to save image');
+      throw new DirectoryError(`Failed to save image in '${destination}'`);
     }
   }
 
