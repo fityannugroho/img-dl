@@ -1,12 +1,14 @@
 import fs from 'node:fs';
 import { describe, expect, test } from 'vitest';
 import { download, getDownloadOptions } from '~/downloader.js';
+import ArgumentError from '~/errors/ArgumentError.js';
 import DirectoryError from '~/errors/DirectoryError.js';
 import FetchError from '~/errors/FetchError.js';
 
 describe('`getDownloadOptions()`', () => {
+  const urlTest = 'https://picsum.photos/200/300';
   const defaultFilenameRegex = /^\d{13}$/;
-  const defaultExtension = '.jpg';
+  const defaultExtension = 'jpg';
 
   test('Only `url` with file ending', () => {
     const url = 'https://picsum.photos/200/300.webp';
@@ -14,59 +16,59 @@ describe('`getDownloadOptions()`', () => {
     expect(getDownloadOptions(url)).toEqual({
       destination: process.cwd(),
       filename: '300',
-      extension: '.webp',
+      extension: 'webp',
     });
   });
 
   test('Only `url` without file ending', () => {
-    const url = 'https://picsum.photos/200/300';
-
-    expect(getDownloadOptions(url)).toEqual({
+    expect(getDownloadOptions(urlTest)).toEqual({
       destination: process.cwd(),
       filename: expect.stringMatching(defaultFilenameRegex) as string,
       extension: defaultExtension,
     });
   });
 
-  test('`url` with `destination`', () => {
-    const url = 'https://picsum.photos/200/300';
+  test('with `destination` argument', () => {
     const destination = './test/tmp';
 
-    expect(getDownloadOptions(url, { destination })).toEqual({
+    expect(getDownloadOptions(urlTest, { destination })).toEqual({
       destination,
       filename: expect.stringMatching(defaultFilenameRegex) as string,
       extension: defaultExtension,
     });
   });
 
-  test('`url` with `filename`', () => {
-    const url = 'https://picsum.photos/200/300';
+  test('with `filename` argument', () => {
     const filename = 'test';
 
-    expect(getDownloadOptions(url, { filename })).toEqual({
+    expect(getDownloadOptions(urlTest, { filename })).toEqual({
       destination: process.cwd(),
       filename,
       extension: defaultExtension,
     });
   });
 
-  test('`url` with `extension`', () => {
-    const url = 'https://picsum.photos/200/300';
-    const extension = '.png';
+  test('with `extension` argument', () => {
+    const extension = 'png';
 
-    expect(getDownloadOptions(url, { extension })).toEqual({
+    expect(getDownloadOptions(urlTest, { extension })).toEqual({
       destination: process.cwd(),
       filename: expect.stringMatching(defaultFilenameRegex) as string,
       extension,
     });
   });
 
-  test('`url` with `destination`, `filename` and `extension`', () => {
+  test('with invalid `extension` argument', () => {
+    expect(() => getDownloadOptions(urlTest, { extension: '.jpg' })).toThrow(ArgumentError);
+    expect(() => getDownloadOptions(urlTest, { extension: '.mp4' })).toThrow(ArgumentError);
+  });
+
+  test('with `destination`, `filename` and `extension` arguments', () => {
     const url = 'https://picsum.photos/200/300';
     const options = {
       destination: './test/tmp',
       filename: 'test',
-      extension: '.png',
+      extension: 'png',
     };
 
     expect(getDownloadOptions(url, options)).toEqual(options);

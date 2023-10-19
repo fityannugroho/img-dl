@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { pipeline } from 'node:stream/promises';
+import ArgumentError from './errors/ArgumentError.js';
 import DirectoryError from './errors/DirectoryError.js';
 import FetchError from './errors/FetchError.js';
 
@@ -24,7 +25,7 @@ export type DownloadOptions = {
    *
    * If not provided, the extension of the URL will be used.
    *
-   * If the URL doesn't have an extension, `.jpg` will be used.
+   * If the URL doesn't have an extension, `jpg` will be used.
    */
   extension?: string;
 };
@@ -49,11 +50,15 @@ export function getDownloadOptions(url: string, options?: DownloadOptions) {
 
   let extension = options?.extension;
   if (!extension || extension === '') {
-    if (path.extname(url) === '') {
-      extension = '.jpg';
+    const pathExt = path.extname(url);
+
+    if (!pathExt.match(/^\.[a-zA-Z]+$/)) {
+      extension = 'jpg';
     } else {
-      extension = path.extname(url);
+      extension = pathExt.toLowerCase().replace('.', '');
     }
+  } else if (extension.includes('.')) {
+    throw new ArgumentError('Invalid `extension` value');
   }
 
   return { destination, filename, extension };
@@ -112,7 +117,7 @@ export async function download(url: string, options: DownloadOptions = {}) {
     throw new FetchError('The response is not an image.');
   }
 
-  const filePath = path.join(destination, `${filename}${extension}`);
+  const filePath = path.join(destination, `${filename}.${extension}`);
   try {
     await pipeline(response.body, fs.createWriteStream(filePath));
   } catch (error) {
