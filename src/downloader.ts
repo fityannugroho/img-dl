@@ -15,9 +15,10 @@ export type DownloadOptions = {
   /**
    * The name of the image file.
    *
-   * If not provided, the filename of the URL will be used.
+   * If not provided, the file name of the URL will be used.
+   * If the URL doesn't have a file name (with extension), the default value will be used.
    *
-   * If the URL doesn't have a filename with extension, the current timestamp will be used.
+   * @default 'image'
    */
   name?: string;
   /**
@@ -42,7 +43,7 @@ export function getDownloadOptions(url: string, options?: DownloadOptions) {
   let name = options?.name;
   if (!name || name === '') {
     if (path.extname(url) === '') {
-      name = `${Date.now()}`;
+      name = 'image';
     } else {
       name = path.basename(url, path.extname(url));
     }

@@ -7,7 +7,7 @@ import FetchError from '~/errors/FetchError.js';
 
 describe('`getDownloadOptions()`', () => {
   const urlTest = 'https://picsum.photos/200/300';
-  const defaultFilenameRegex = /^\d{13}$/;
+  const defaultFileName = 'image';
   const defaultExtension = 'jpg';
 
   test('Only `url` with file ending', () => {
@@ -23,7 +23,7 @@ describe('`getDownloadOptions()`', () => {
   test('Only `url` without file ending', () => {
     expect(getDownloadOptions(urlTest)).toEqual({
       directory: process.cwd(),
-      name: expect.stringMatching(defaultFilenameRegex) as string,
+      name: defaultFileName,
       extension: defaultExtension,
     });
   });
@@ -33,7 +33,7 @@ describe('`getDownloadOptions()`', () => {
 
     expect(getDownloadOptions(urlTest, { directory })).toEqual({
       directory,
-      name: expect.stringMatching(defaultFilenameRegex) as string,
+      name: defaultFileName,
       extension: defaultExtension,
     });
   });
@@ -53,7 +53,7 @@ describe('`getDownloadOptions()`', () => {
 
     expect(getDownloadOptions(urlTest, { extension })).toEqual({
       directory: process.cwd(),
-      name: expect.stringMatching(defaultFilenameRegex) as string,
+      name: defaultFileName,
       extension,
     });
   });
