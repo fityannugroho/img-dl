@@ -1,61 +1,73 @@
 import fs from 'node:fs';
 import { describe, expect, test } from 'vitest';
-import { download, getDownloadOptions } from '~/downloader.js';
+import { DEFAULT_NAME, download, getDownloadOptions } from '~/downloader.js';
 import ArgumentError from '~/errors/ArgumentError.js';
 import DirectoryError from '~/errors/DirectoryError.js';
 import FetchError from '~/errors/FetchError.js';
 
 describe('`getDownloadOptions()`', () => {
   const urlTest = 'https://picsum.photos/200/300';
-  const defaultFileName = 'image';
   const defaultExtension = 'jpg';
+  const defaultExpected = {
+    directory: process.cwd(),
+    name: DEFAULT_NAME,
+    extension: defaultExtension,
+  };
 
   test('Only `url` with file ending', () => {
     const url = 'https://picsum.photos/200/300.webp';
 
     expect(getDownloadOptions(url)).toEqual({
-      directory: process.cwd(),
+      ...defaultExpected,
       name: '300',
       extension: 'webp',
     });
   });
 
   test('Only `url` without file ending', () => {
-    expect(getDownloadOptions(urlTest)).toEqual({
-      directory: process.cwd(),
-      name: defaultFileName,
-      extension: defaultExtension,
-    });
+    expect(getDownloadOptions(urlTest)).toEqual(defaultExpected);
   });
 
   test('with `directory` argument', () => {
     const directory = './test/tmp';
 
-    expect(getDownloadOptions(urlTest, { directory })).toEqual({
-      directory,
-      name: defaultFileName,
-      extension: defaultExtension,
-    });
+    expect(getDownloadOptions(urlTest, { directory }))
+      .toEqual({ ...defaultExpected, directory });
   });
 
-  test('with `name` argument', () => {
-    const name = 'test';
+  describe('with `name` argument', () => {
+    test('empty string', () => {
+      expect(getDownloadOptions(urlTest, { name: '' }))
+        .toEqual({ ...defaultExpected, name: DEFAULT_NAME });
+    });
 
-    expect(getDownloadOptions(urlTest, { name })).toEqual({
-      directory: process.cwd(),
-      name,
-      extension: defaultExtension,
+    test('string', () => {
+      expect(getDownloadOptions(urlTest, { name: 'test' }))
+        .toEqual({ ...defaultExpected, name: 'test' });
+    });
+
+    test('function returns empty string', () => {
+      expect(getDownloadOptions(urlTest, { name: () => '' }))
+        .toEqual({ ...defaultExpected, name: DEFAULT_NAME });
+    });
+
+    test('function returns string', () => {
+      expect(getDownloadOptions(urlTest, { name: () => 'test' }))
+        .toEqual({ ...defaultExpected, name: 'test' });
+    });
+
+    test('function with original name', () => {
+      expect(getDownloadOptions(urlTest, { name: (ori) => `test-${ori}` }))
+        .toEqual({ ...defaultExpected, name: 'test-undefined' });
+
+      expect(getDownloadOptions('https://picsum.photos/200/300.webp', { name: (ori) => `test-${ori}` }))
+        .toEqual({ ...defaultExpected, name: 'test-300', extension: 'webp' });
     });
   });
 
   test('with `extension` argument', () => {
-    const extension = 'png';
-
-    expect(getDownloadOptions(urlTest, { extension })).toEqual({
-      directory: process.cwd(),
-      name: defaultFileName,
-      extension,
-    });
+    expect(getDownloadOptions(urlTest, { extension: 'png' }))
+      .toEqual({ ...defaultExpected, extension: 'png' });
   });
 
   test('with invalid `extension` argument', () => {

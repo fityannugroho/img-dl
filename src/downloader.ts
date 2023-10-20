@@ -5,6 +5,8 @@ import ArgumentError from './errors/ArgumentError.js';
 import DirectoryError from './errors/DirectoryError.js';
 import FetchError from './errors/FetchError.js';
 
+export const DEFAULT_NAME = 'image';
+
 export type DownloadOptions = {
   /**
    * The directory to save the image to.
@@ -15,12 +17,15 @@ export type DownloadOptions = {
   /**
    * The name of the image file.
    *
-   * If not provided, the file name of the URL will be used.
-   * If the URL doesn't have a file name (with extension), the default value will be used.
+   * You also can provide a function that returns the name.
+   * The function will be called with the original name, if it exists in the URL.
    *
-   * @default 'image'
+   * The default value will be used if this value (or the function) returns an empty string.
+   *
+   * The default value will be the **original name** if it exists in the URL.
+   * Otherwise, it will be **'image'**.
    */
-  name?: string;
+  name?: string | ((original?: string) => string);
   /**
    * The extension of the image.
    *
@@ -40,19 +45,24 @@ export function getDownloadOptions(url: string, options?: DownloadOptions) {
     directory = process.cwd();
   }
 
-  let name = options?.name;
-  if (!name || name === '') {
-    if (path.extname(url) === '') {
-      name = 'image';
-    } else {
-      name = path.basename(url, path.extname(url));
+  const pathExt = path.extname(url);
+  const originalName = pathExt === '' ? undefined : path.basename(url, pathExt);
+
+  let name = '';
+  if (options?.name) {
+    if (typeof options.name === 'function') {
+      name = options.name(originalName);
     }
+    if (typeof options.name === 'string') {
+      name = options.name;
+    }
+  }
+  if (name.trim().length === 0) {
+    name = originalName ?? DEFAULT_NAME;
   }
 
   let extension = options?.extension;
   if (!extension || extension === '') {
-    const pathExt = path.extname(url);
-
     if (!pathExt.match(/^\.[a-zA-Z]+$/)) {
       extension = 'jpg';
     } else {
