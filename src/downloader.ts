@@ -1,11 +1,11 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { pipeline } from 'node:stream/promises';
+import sanitize from 'sanitize-filename';
 import ArgumentError from './errors/ArgumentError.js';
 import DirectoryError from './errors/DirectoryError.js';
 import FetchError from './errors/FetchError.js';
-
-export const DEFAULT_NAME = 'image';
+import { DEFAULT_EXTENSION, DEFAULT_NAME, imageExtensions } from './constanta.js';
 
 export type DownloadOptions = {
   /**
@@ -38,38 +38,61 @@ export type DownloadOptions = {
 
 /**
  * Set the options with the default values if they are not provided.
+ *
+ * @throws {ArgumentError} If there is an invalid value.
  */
 export function getDownloadOptions(url: string, options?: DownloadOptions) {
   let directory = options?.directory;
-  if (!directory || directory === '') {
+
+  if (!directory) {
     directory = process.cwd();
   }
 
-  const pathExt = path.extname(url);
-  const originalName = pathExt === '' ? undefined : path.basename(url, pathExt);
+  // Validate the directory path syntax and ensure it is a directory without a filename.
+  const { base, name: nameFromPath } = path.parse(directory);
+  if (base !== nameFromPath) {
+    throw new ArgumentError('`directory` cannot contain filename');
+  }
+
+  const lowerImgExts = [...imageExtensions].map((ext) => ext.toLowerCase());
+  const originalExt = path.extname(url).replace('.', '');
+  const originalName = originalExt === '' ? undefined : path.basename(url, `.${originalExt}`);
 
   let name = '';
-  if (options?.name) {
-    if (typeof options.name === 'function') {
-      name = options.name(originalName);
-    }
-    if (typeof options.name === 'string') {
-      name = options.name;
-    }
+
+  if (typeof options?.name === 'function') {
+    name = options.name(originalName);
+  } else if (options?.name) {
+    name = options.name;
   }
-  if (name.trim().length === 0) {
+
+  if (sanitize(name) !== name) {
+    throw new ArgumentError('Invalid `name` value');
+  }
+
+  const extInName = name.toLowerCase().split('.').pop();
+  if (extInName && lowerImgExts.includes(extInName)) {
+    throw new ArgumentError('`name` cannot contain image extension');
+  }
+
+  if (name.trim() === '') {
     name = originalName ?? DEFAULT_NAME;
   }
 
-  let extension = options?.extension;
-  if (!extension || extension === '') {
-    if (!pathExt.match(/^\.[a-zA-Z]+$/)) {
-      extension = 'jpg';
-    } else {
-      extension = pathExt.toLowerCase().replace('.', '');
+  let extension = '';
+
+  if (options?.extension) {
+    if (
+      !lowerImgExts.includes(options.extension.toLowerCase())
+      || options.extension.includes('.')
+    ) {
+      throw new ArgumentError('Invalid `extension` value');
     }
-  } else if (extension.includes('.')) {
-    throw new ArgumentError('Invalid `extension` value');
+    extension = options.extension;
+  }
+
+  if (extension === '') {
+    extension = lowerImgExts.includes(originalExt.toLowerCase()) ? originalExt : DEFAULT_EXTENSION;
   }
 
   return { directory, name, extension };
