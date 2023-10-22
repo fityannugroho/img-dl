@@ -13,7 +13,7 @@ describe('`imgdl()`', () => {
 
     // Cleanup
     fs.unlinkSync(expectedFilePath);
-  }, { timeout: 10000 });
+  }, { timeout: 15000 });
 
   describe('multiple', () => {
     const testUrls = ['https://picsum.photos/200/300.webp', 'https://picsum.photos/200/300'];
@@ -27,7 +27,7 @@ describe('`imgdl()`', () => {
         expect(fs.existsSync(filepath)).toBe(true); // Ensure the image is actually exists
         fs.unlinkSync(filepath); // Cleanup
       });
-    }, { timeout: 10000 });
+    }, { timeout: 15000 });
 
     test('with `directory` argument', async () => {
       const directory = 'test/tmp';
@@ -38,7 +38,7 @@ describe('`imgdl()`', () => {
         expect(fs.existsSync(filepath)).toBe(true); // Ensure the image is actually exists
         fs.unlinkSync(filepath); // Cleanup
       });
-    }, { timeout: 10000 });
+    }, { timeout: 15000 });
 
     test('with `name` argument', async () => {
       const expectedFilePaths = ['asset-1.webp', 'asset-2.jpg'].map((n) => `${process.cwd()}/${n}`);
@@ -48,6 +48,6 @@ describe('`imgdl()`', () => {
         expect(fs.existsSync(filepath)).toBe(true); // Ensure the image is actually exists
         fs.unlinkSync(filepath); // Cleanup
       });
-    });
+    }, { timeout: 15000 });
   });
 });

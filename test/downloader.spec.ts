@@ -165,7 +165,7 @@ describe('`download()`', () => {
 
     // Cleanup
     fs.unlinkSync(expectedFilePath);
-  }, { timeout: 10000 });
+  }, { timeout: 15000 });
 
   test('should throw an error if the directory cannot be created', async () => {
     const url = 'https://picsum.photos/200/300';
