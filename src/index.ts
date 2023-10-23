@@ -48,16 +48,43 @@ export type Options = Omit<DownloadOptions, 'name'> & {
    * `index` will start from 1.
    */
   name?: string;
+  /**
+   * Do something when the image is successfully downloaded.
+   * For example, counting the number of successful downloads.
+   *
+   * Only called when downloading multiple images.
+   *
+   * @param image The downloaded image.
+   */
+  onSuccess?: (image: Image) => void;
+  /**
+   * Do something when the image download failed.
+   * For example, counting the number of failed downloads.
+   *
+   * Only called when downloading multiple images.
+   *
+   * @param error The error that caused the download to fail.
+   */
+  onError?: (error: Error) => void;
 };
 
 async function imgdl(url: string, options?: Options): Promise<Image>;
 async function imgdl(url: string[], options?: Options): Promise<Image[]>;
 async function imgdl(url: string | string[], options?: Options): Promise<Image | Image[]> {
   if (Array.isArray(url)) {
-    return Promise.all(url.map((u, i) => download(u, {
+    const promises = url.map((u, i) => download(u, {
       ...options,
       name: (ori) => `${options?.name ?? ori ?? DEFAULT_NAME}-${i + 1}`,
-    })));
+    }).then((image) => {
+      options?.onSuccess?.(image);
+      return image;
+    }).catch((error) => {
+      if (error instanceof Error) {
+        options?.onError?.(error);
+      }
+    }));
+
+    return (await Promise.all(promises)).filter((img): img is Image => img !== undefined);
   }
 
   return download(url, options);

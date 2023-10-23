@@ -1,5 +1,7 @@
 import fs from 'node:fs';
-import { describe, expect, test } from 'vitest';
+import {
+  describe, expect, test, vi,
+} from 'vitest';
 import { DEFAULT_NAME } from '~/constanta.js';
 import imgdl from '~/index.js';
 
@@ -52,5 +54,31 @@ describe('`imgdl()`', () => {
         fs.unlinkSync(filepath); // Cleanup
       });
     }, { timeout: 15000 });
+
+    test('with `onSuccess` argument', async () => {
+      const expectedFilePaths = expectedNames.map((n) => `${process.cwd()}/${n}`);
+      let downloadCount = 0;
+      const onSuccess = vi.fn().mockImplementation(() => { downloadCount += 1; });
+      const images = await imgdl(testUrls, { onSuccess });
+
+      expect(images.map((img) => img.path)).toEqual(expectedFilePaths);
+      expect(onSuccess).toHaveBeenCalledTimes(2);
+      expect(downloadCount).toEqual(2);
+
+      expectedFilePaths.forEach((filepath) => {
+        expect(fs.existsSync(filepath)).toBe(true); // Ensure the image is actually exists
+        fs.unlinkSync(filepath); // Cleanup
+      });
+    }, { timeout: 15000 });
+
+    test('with `onError` argument', async () => {
+      let errorCount = 0;
+      const onError = vi.fn().mockImplementation(() => { errorCount += 1; });
+      const images = await imgdl(['invalid-url1', 'invalid-url2'], { onError });
+
+      expect(onError).toHaveBeenCalledTimes(2);
+      expect(errorCount).toEqual(2);
+      expect(images).toEqual([]);
+    });
   });
 });
