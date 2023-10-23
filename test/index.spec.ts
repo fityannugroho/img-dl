@@ -8,7 +8,7 @@ describe('`imgdl()`', () => {
     const url = 'https://picsum.photos/200/300.webp';
     const expectedFilePath = `${process.cwd()}/300.webp`;
 
-    expect(await imgdl(url)).toEqual(expectedFilePath);
+    expect((await imgdl(url)).path).toEqual(expectedFilePath);
     expect(fs.existsSync(expectedFilePath)).toBe(true); // Ensure the image is actually exists
 
     // Cleanup
@@ -21,8 +21,9 @@ describe('`imgdl()`', () => {
 
     test('only array of `url`s', async () => {
       const expectedFilePaths = expectedNames.map((n) => `${process.cwd()}/${n}`);
+      const images = await imgdl(testUrls);
 
-      expect(await imgdl(testUrls)).toEqual(expectedFilePaths);
+      expect(images.map((img) => img.path)).toEqual(expectedFilePaths);
       expectedFilePaths.forEach((filepath) => {
         expect(fs.existsSync(filepath)).toBe(true); // Ensure the image is actually exists
         fs.unlinkSync(filepath); // Cleanup
@@ -31,9 +32,10 @@ describe('`imgdl()`', () => {
 
     test('with `directory` argument', async () => {
       const directory = 'test/tmp';
-      const expectedFilePaths = expectedNames.map((n) => `${directory}/${n}`);
+      const expectedFilePaths = expectedNames.map((n) => `${process.cwd()}/${directory}/${n}`);
+      const images = await imgdl(testUrls, { directory });
 
-      expect(await imgdl(testUrls, { directory })).toEqual(expectedFilePaths);
+      expect(images.map((img) => img.path)).toEqual(expectedFilePaths);
       expectedFilePaths.forEach((filepath) => {
         expect(fs.existsSync(filepath)).toBe(true); // Ensure the image is actually exists
         fs.unlinkSync(filepath); // Cleanup
@@ -42,8 +44,9 @@ describe('`imgdl()`', () => {
 
     test('with `name` argument', async () => {
       const expectedFilePaths = ['asset-1.webp', 'asset-2.jpg'].map((n) => `${process.cwd()}/${n}`);
+      const images = await imgdl(testUrls, { name: 'asset' });
 
-      expect(await imgdl(testUrls, { name: 'asset' })).toEqual(expectedFilePaths);
+      expect(images.map((img) => img.path)).toEqual(expectedFilePaths);
       expectedFilePaths.forEach((filepath) => {
         expect(fs.existsSync(filepath)).toBe(true); // Ensure the image is actually exists
         fs.unlinkSync(filepath); // Cleanup

@@ -6,6 +6,7 @@ import ArgumentError from './errors/ArgumentError.js';
 import DirectoryError from './errors/DirectoryError.js';
 import FetchError from './errors/FetchError.js';
 import { DEFAULT_EXTENSION, DEFAULT_NAME, imageExtensions } from './constanta.js';
+import { Image } from './index.js';
 
 export type DownloadOptions = {
   /**
@@ -41,46 +42,46 @@ export type DownloadOptions = {
  *
  * @throws {ArgumentError} If there is an invalid value.
  */
-export function getDownloadOptions(url: string, options?: DownloadOptions) {
-  let directory = options?.directory;
-
-  if (!directory) {
-    directory = process.cwd();
-  }
+export function parseImageParams(url: string, options?: DownloadOptions) {
+  const lowerImgExts = [...imageExtensions].map((ext) => ext.toLowerCase());
+  const originalExt = path.extname(url).replace('.', '');
+  const img: Image = {
+    url,
+    name: '',
+    extension: '',
+    directory: options?.directory ? path.normalize(options.directory) : process.cwd(),
+    originalName: originalExt === '' ? undefined : path.basename(url, `.${originalExt}`),
+    originalExtension: originalExt === '' ? undefined : originalExt,
+    path: '',
+  };
 
   // Validate the directory path syntax and ensure it is a directory without a filename.
-  const { base, name: nameFromPath } = path.parse(directory);
+  const { base, name: nameFromPath } = path.parse(img.directory);
   if (base !== nameFromPath) {
     throw new ArgumentError('`directory` cannot contain filename');
   }
 
-  const lowerImgExts = [...imageExtensions].map((ext) => ext.toLowerCase());
-  const originalExt = path.extname(url).replace('.', '');
-  const originalName = originalExt === '' ? undefined : path.basename(url, `.${originalExt}`);
-
-  let name = '';
-
+  // Set name
   if (typeof options?.name === 'function') {
-    name = options.name(originalName);
+    img.name = options.name(img.originalName);
   } else if (options?.name) {
-    name = options.name;
+    img.name = options.name;
   }
 
-  if (sanitize(name) !== name) {
+  if (sanitize(img.name) !== img.name) {
     throw new ArgumentError('Invalid `name` value');
   }
 
-  const extInName = name.toLowerCase().split('.').pop();
+  const extInName = img.name.toLowerCase().split('.').pop();
   if (extInName && lowerImgExts.includes(extInName)) {
     throw new ArgumentError('`name` cannot contain image extension');
   }
 
-  if (name.trim() === '') {
-    name = originalName ?? DEFAULT_NAME;
+  if (img.name.trim() === '') {
+    img.name = img.originalName ?? DEFAULT_NAME;
   }
 
-  let extension = '';
-
+  // Set extension
   if (options?.extension) {
     if (
       !lowerImgExts.includes(options.extension.toLowerCase())
@@ -88,14 +89,18 @@ export function getDownloadOptions(url: string, options?: DownloadOptions) {
     ) {
       throw new ArgumentError('Invalid `extension` value');
     }
-    extension = options.extension;
+    img.extension = options.extension;
   }
 
-  if (extension === '') {
-    extension = lowerImgExts.includes(originalExt.toLowerCase()) ? originalExt : DEFAULT_EXTENSION;
+  if (img.extension === '') {
+    img.extension = lowerImgExts.includes(originalExt.toLowerCase())
+      ? originalExt : DEFAULT_EXTENSION;
   }
 
-  return { directory, name, extension };
+  // Set path
+  img.path = path.resolve(img.directory, `${img.name}.${img.extension}`);
+
+  return img;
 }
 
 /**
@@ -107,21 +112,21 @@ export function getDownloadOptions(url: string, options?: DownloadOptions) {
  * @throws {FetchError} If the URL is invalid or the response is unsuccessful.
  */
 export async function download(url: string, options: DownloadOptions = {}) {
-  const { directory, name, extension } = getDownloadOptions(url, options);
+  const img = parseImageParams(url, options);
 
   try {
     // Create the directory if it doesn't exist.
-    if (!fs.existsSync(directory)) {
-      fs.mkdirSync(directory, { recursive: true });
+    if (!fs.existsSync(img.directory)) {
+      fs.mkdirSync(img.directory, { recursive: true });
     }
   } catch (error) {
     if (error instanceof Error) {
       if (error.message.includes('EACCES')) {
-        throw new DirectoryError(`Permission denied to create '${directory}'`);
+        throw new DirectoryError(`Permission denied to create '${img.directory}'`);
       }
       throw new DirectoryError(error.message);
     } else {
-      throw new DirectoryError(`Failed to create '${directory}'`);
+      throw new DirectoryError(`Failed to create '${img.directory}'`);
     }
   }
 
@@ -151,19 +156,18 @@ export async function download(url: string, options: DownloadOptions = {}) {
     throw new FetchError('The response is not an image.');
   }
 
-  const filePath = path.join(directory, `${name}.${extension}`);
   try {
-    await pipeline(response.body, fs.createWriteStream(filePath));
+    await pipeline(response.body, fs.createWriteStream(img.path));
   } catch (error) {
     if (error instanceof Error) {
       if (error.message.includes('EACCES')) {
-        throw new DirectoryError(`Permission denied to save image in '${directory}'`);
+        throw new DirectoryError(`Permission denied to save image in '${img.directory}'`);
       }
       throw new DirectoryError(error.message);
     } else {
-      throw new DirectoryError(`Failed to save image in '${directory}'`);
+      throw new DirectoryError(`Failed to save image in '${img.directory}'`);
     }
   }
 
-  return filePath;
+  return img;
 }

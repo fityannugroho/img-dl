@@ -1,156 +1,216 @@
 import fs from 'node:fs';
 import { describe, expect, test } from 'vitest';
 import { DEFAULT_EXTENSION, DEFAULT_NAME } from '~/constanta.js';
-import { download, getDownloadOptions } from '~/downloader.js';
+import { download, parseImageParams } from '~/downloader.js';
 import ArgumentError from '~/errors/ArgumentError.js';
 import DirectoryError from '~/errors/DirectoryError.js';
 import FetchError from '~/errors/FetchError.js';
 
-describe('`getDownloadOptions()`', () => {
+describe('`parseImageParams()`', () => {
   const urlTest = 'https://picsum.photos/200/300';
   const defaultExpected = {
+    url: urlTest,
     directory: process.cwd(),
     name: DEFAULT_NAME,
     extension: DEFAULT_EXTENSION,
+    originalName: undefined,
+    originalExtension: undefined,
+    path: `${process.cwd()}/${DEFAULT_NAME}.${DEFAULT_EXTENSION}`,
   };
 
   test('Only `url` with file ending', () => {
     const url = 'https://picsum.photos/200/300.webp';
 
-    expect(getDownloadOptions(url)).toEqual({
+    expect(parseImageParams(url)).toEqual({
       ...defaultExpected,
+      url,
       name: '300',
       extension: 'webp',
+      originalName: '300',
+      originalExtension: 'webp',
+      path: `${defaultExpected.directory}/300.webp`,
     });
   });
 
   test('Only `url` without file ending', () => {
-    expect(getDownloadOptions(urlTest)).toEqual(defaultExpected);
+    expect(parseImageParams(urlTest)).toEqual(defaultExpected);
   });
 
   describe('with `directory` argument', () => {
     test('empty string', () => {
-      expect(getDownloadOptions(urlTest, { directory: '' })).toEqual(defaultExpected);
+      expect(parseImageParams(urlTest, { directory: '' })).toEqual(defaultExpected);
     });
 
     test('valid directory', () => {
-      expect(getDownloadOptions(urlTest, { directory: 'test' }))
-        .toEqual({ ...defaultExpected, directory: 'test' });
+      expect(parseImageParams(urlTest, { directory: 'test' })).toEqual({
+        ...defaultExpected,
+        directory: 'test',
+        path: `${defaultExpected.directory}/test/${defaultExpected.name}.${defaultExpected.extension}`,
+      });
 
-      expect(getDownloadOptions(urlTest, { directory: '.' }))
+      expect(parseImageParams(urlTest, { directory: '.' }))
         .toEqual({ ...defaultExpected, directory: '.' });
 
-      expect(getDownloadOptions(urlTest, { directory: './test' }))
-        .toEqual({ ...defaultExpected, directory: './test' });
+      expect(parseImageParams(urlTest, { directory: './test' })).toEqual({
+        ...defaultExpected,
+        directory: 'test',
+        path: `${defaultExpected.directory}/test/${defaultExpected.name}.${defaultExpected.extension}`,
+      });
 
-      expect(getDownloadOptions(urlTest, { directory: '..' }))
-        .toEqual({ ...defaultExpected, directory: '..' });
+      expect(parseImageParams(urlTest, { directory: 'test/..' })).toEqual({
+        ...defaultExpected,
+        directory: '.',
+        path: `${defaultExpected.directory}/${defaultExpected.name}.${defaultExpected.extension}`,
+      });
 
-      expect(getDownloadOptions(urlTest, { directory: '../test' }))
-        .toEqual({ ...defaultExpected, directory: '../test' });
+      expect(parseImageParams(urlTest, { directory: 'test/../test2' })).toEqual({
+        ...defaultExpected,
+        directory: 'test2',
+        path: `${defaultExpected.directory}/test2/${defaultExpected.name}.${defaultExpected.extension}`,
+      });
 
-      expect(getDownloadOptions(urlTest, { directory: 'test/test' }))
-        .toEqual({ ...defaultExpected, directory: 'test/test' });
+      expect(parseImageParams(urlTest, { directory: 'test/test' })).toEqual({
+        ...defaultExpected,
+        directory: 'test/test',
+        path: `${defaultExpected.directory}/test/test/${defaultExpected.name}.${defaultExpected.extension}`,
+      });
 
-      expect(getDownloadOptions(urlTest, { directory: './test/test' }))
-        .toEqual({ ...defaultExpected, directory: './test/test' });
+      expect(parseImageParams(urlTest, { directory: './test/test' })).toEqual({
+        ...defaultExpected,
+        directory: 'test/test',
+        path: `${defaultExpected.directory}/test/test/${defaultExpected.name}.${defaultExpected.extension}`,
+      });
 
-      expect(getDownloadOptions(urlTest, { directory: '/test' }))
-        .toEqual({ ...defaultExpected, directory: '/test' });
+      expect(parseImageParams(urlTest, { directory: '/test' })).toEqual({
+        ...defaultExpected,
+        directory: '/test',
+        path: `/test/${defaultExpected.name}.${defaultExpected.extension}`,
+      });
     });
 
     test('invalid: contain filename', () => {
-      expect(() => getDownloadOptions(urlTest, { directory: 'test/image.jpg' })).toThrow(ArgumentError);
-      expect(() => getDownloadOptions(urlTest, { directory: './test/image.jpg' })).toThrow(ArgumentError);
-      expect(() => getDownloadOptions(urlTest, { directory: './test/image.jpg/' })).toThrow(ArgumentError);
-      expect(() => getDownloadOptions(urlTest, { directory: 'image.jpg' })).toThrow(ArgumentError);
-      expect(() => getDownloadOptions(urlTest, { directory: './image.jpg' })).toThrow(ArgumentError);
-      expect(() => getDownloadOptions(urlTest, { directory: './image.jpg' })).toThrow(ArgumentError);
+      expect(() => parseImageParams(urlTest, { directory: 'test/image.jpg' })).toThrow(ArgumentError);
+      expect(() => parseImageParams(urlTest, { directory: './test/image.jpg' })).toThrow(ArgumentError);
+      expect(() => parseImageParams(urlTest, { directory: './test/image.jpg/' })).toThrow(ArgumentError);
+      expect(() => parseImageParams(urlTest, { directory: 'image.jpg' })).toThrow(ArgumentError);
+      expect(() => parseImageParams(urlTest, { directory: './image.jpg' })).toThrow(ArgumentError);
+      expect(() => parseImageParams(urlTest, { directory: './image.jpg' })).toThrow(ArgumentError);
     });
   });
 
   describe('with `name` argument', () => {
     test('empty string', () => {
-      expect(getDownloadOptions(urlTest, { name: '' })).toEqual(defaultExpected);
+      expect(parseImageParams(urlTest, { name: '' })).toEqual(defaultExpected);
     });
 
     test('string', () => {
-      expect(getDownloadOptions(urlTest, { name: 'test' }))
-        .toEqual({ ...defaultExpected, name: 'test' });
+      expect(parseImageParams(urlTest, { name: 'test' })).toEqual({
+        ...defaultExpected,
+        name: 'test',
+        path: `${defaultExpected.directory}/test.${defaultExpected.extension}`,
+      });
 
-      expect(getDownloadOptions(urlTest, { name: 'test name' }))
-        .toEqual({ ...defaultExpected, name: 'test name' });
+      expect(parseImageParams(urlTest, { name: 'test name' })).toEqual({
+        ...defaultExpected,
+        name: 'test name',
+        path: `${defaultExpected.directory}/test name.${defaultExpected.extension}`,
+      });
 
-      expect(getDownloadOptions(urlTest, { name: 'test.name' }))
-        .toEqual({ ...defaultExpected, name: 'test.name' });
+      expect(parseImageParams(urlTest, { name: 'test.name' })).toEqual({
+        ...defaultExpected,
+        name: 'test.name',
+        path: `${defaultExpected.directory}/test.name.${defaultExpected.extension}`,
+      });
     });
 
     test('function returns empty string', () => {
-      expect(getDownloadOptions(urlTest, { name: () => '' }))
+      expect(parseImageParams(urlTest, { name: () => '' }))
         .toEqual({ ...defaultExpected, name: DEFAULT_NAME });
     });
 
     test('function returns string', () => {
-      expect(getDownloadOptions(urlTest, { name: () => 'test' }))
-        .toEqual({ ...defaultExpected, name: 'test' });
+      expect(parseImageParams(urlTest, { name: () => 'test' })).toEqual({
+        ...defaultExpected,
+        name: 'test',
+        path: `${defaultExpected.directory}/test.${defaultExpected.extension}`,
+      });
     });
 
     test('function with original name', () => {
-      expect(getDownloadOptions(urlTest, { name: (ori) => `test-${ori}` }))
-        .toEqual({ ...defaultExpected, name: 'test-undefined' });
+      expect(parseImageParams(urlTest, { name: (ori) => `test-${ori}` })).toEqual({
+        ...defaultExpected,
+        name: 'test-undefined',
+        path: `${defaultExpected.directory}/test-undefined.${defaultExpected.extension}`,
+      });
 
-      expect(getDownloadOptions('https://picsum.photos/200/300.webp', { name: (ori) => `test-${ori}` }))
-        .toEqual({ ...defaultExpected, name: 'test-300', extension: 'webp' });
+      expect(parseImageParams('https://picsum.photos/200/300.webp', { name: (ori) => `test-${ori}` })).toEqual({
+        ...defaultExpected,
+        url: 'https://picsum.photos/200/300.webp',
+        name: 'test-300',
+        extension: 'webp',
+        originalName: '300',
+        originalExtension: 'webp',
+        path: `${defaultExpected.directory}/test-300.webp`,
+      });
     });
 
     test('invalid: contain prohibited characters', () => {
-      expect(() => getDownloadOptions(urlTest, { name: 'test<image' })).toThrow(ArgumentError);
-      expect(() => getDownloadOptions(urlTest, { name: 'test>image' })).toThrow(ArgumentError);
-      expect(() => getDownloadOptions(urlTest, { name: 'test:image' })).toThrow(ArgumentError);
-      expect(() => getDownloadOptions(urlTest, { name: 'test"image' })).toThrow(ArgumentError);
-      expect(() => getDownloadOptions(urlTest, { name: 'test/image' })).toThrow(ArgumentError);
-      expect(() => getDownloadOptions(urlTest, { name: 'test\\image' })).toThrow(ArgumentError);
-      expect(() => getDownloadOptions(urlTest, { name: 'test|image' })).toThrow(ArgumentError);
-      expect(() => getDownloadOptions(urlTest, { name: 'test?image' })).toThrow(ArgumentError);
-      expect(() => getDownloadOptions(urlTest, { name: 'test*image' })).toThrow(ArgumentError);
-      expect(() => getDownloadOptions(urlTest, { name: 'test  ' })).toThrow(ArgumentError);
+      expect(() => parseImageParams(urlTest, { name: 'test<image' })).toThrow(ArgumentError);
+      expect(() => parseImageParams(urlTest, { name: 'test>image' })).toThrow(ArgumentError);
+      expect(() => parseImageParams(urlTest, { name: 'test:image' })).toThrow(ArgumentError);
+      expect(() => parseImageParams(urlTest, { name: 'test"image' })).toThrow(ArgumentError);
+      expect(() => parseImageParams(urlTest, { name: 'test/image' })).toThrow(ArgumentError);
+      expect(() => parseImageParams(urlTest, { name: 'test\\image' })).toThrow(ArgumentError);
+      expect(() => parseImageParams(urlTest, { name: 'test|image' })).toThrow(ArgumentError);
+      expect(() => parseImageParams(urlTest, { name: 'test?image' })).toThrow(ArgumentError);
+      expect(() => parseImageParams(urlTest, { name: 'test*image' })).toThrow(ArgumentError);
+      expect(() => parseImageParams(urlTest, { name: 'test  ' })).toThrow(ArgumentError);
       // Other tests is covered by `sanitize-filename` in https://github.com/parshap/node-sanitize-filename/blob/master/test.js
     });
 
     test('invalid: contains image extension', () => {
-      expect(() => getDownloadOptions(urlTest, { name: 'test.jpg' })).toThrow(ArgumentError);
-      expect(() => getDownloadOptions(urlTest, { name: 'test.png' })).toThrow(ArgumentError);
-      expect(() => getDownloadOptions(urlTest, { name: 'test.webp' })).toThrow(ArgumentError);
+      expect(() => parseImageParams(urlTest, { name: 'test.jpg' })).toThrow(ArgumentError);
+      expect(() => parseImageParams(urlTest, { name: 'test.png' })).toThrow(ArgumentError);
+      expect(() => parseImageParams(urlTest, { name: 'test.webp' })).toThrow(ArgumentError);
     });
   });
 
   describe('with `extension` argument', () => {
     test('empty string', () => {
-      expect(getDownloadOptions(urlTest, { extension: '' })).toEqual(defaultExpected);
+      expect(parseImageParams(urlTest, { extension: '' })).toEqual(defaultExpected);
     });
 
     test('valid image extension', () => {
-      expect(getDownloadOptions(urlTest, { extension: 'png' }))
-        .toEqual({ ...defaultExpected, extension: 'png' });
+      expect(parseImageParams(urlTest, { extension: 'png' })).toEqual({
+        ...defaultExpected,
+        extension: 'png',
+        path: `${defaultExpected.directory}/${defaultExpected.name}.png`,
+      });
 
-      expect(getDownloadOptions(urlTest, { extension: 'webp' }))
-        .toEqual({ ...defaultExpected, extension: 'webp' });
+      expect(parseImageParams(urlTest, { extension: 'webp' })).toEqual({
+        ...defaultExpected,
+        extension: 'webp',
+        path: `${defaultExpected.directory}/${defaultExpected.name}.webp`,
+      });
 
-      expect(getDownloadOptions(urlTest, { extension: 'JPG' }))
-        .toEqual({ ...defaultExpected, extension: 'JPG' });
+      expect(parseImageParams(urlTest, { extension: 'JPG' })).toEqual({
+        ...defaultExpected,
+        extension: 'JPG',
+        path: `${defaultExpected.directory}/${defaultExpected.name}.JPG`,
+      });
     });
 
     test('invalid: contain dot', () => {
-      expect(() => getDownloadOptions(urlTest, { extension: '.jpg' })).toThrow(ArgumentError);
-      expect(() => getDownloadOptions(urlTest, { extension: '.png' })).toThrow(ArgumentError);
-      expect(() => getDownloadOptions(urlTest, { extension: 'test.test' })).toThrow(ArgumentError);
-      expect(() => getDownloadOptions(urlTest, { extension: 'test.test.test' })).toThrow(ArgumentError);
+      expect(() => parseImageParams(urlTest, { extension: '.jpg' })).toThrow(ArgumentError);
+      expect(() => parseImageParams(urlTest, { extension: '.png' })).toThrow(ArgumentError);
+      expect(() => parseImageParams(urlTest, { extension: 'test.test' })).toThrow(ArgumentError);
+      expect(() => parseImageParams(urlTest, { extension: 'test.test.test' })).toThrow(ArgumentError);
     });
 
     test('invalid: not an image extension', () => {
-      expect(() => getDownloadOptions(urlTest, { extension: 'mp4' })).toThrow(ArgumentError);
-      expect(() => getDownloadOptions(urlTest, { extension: 'txt' })).toThrow(ArgumentError);
-      expect(() => getDownloadOptions(urlTest, { extension: 'unknown' })).toThrow(ArgumentError);
+      expect(() => parseImageParams(urlTest, { extension: 'mp4' })).toThrow(ArgumentError);
+      expect(() => parseImageParams(urlTest, { extension: 'txt' })).toThrow(ArgumentError);
+      expect(() => parseImageParams(urlTest, { extension: 'unknown' })).toThrow(ArgumentError);
     });
   });
 });
@@ -160,7 +220,7 @@ describe('`download()`', () => {
     const url = 'https://picsum.photos/200/300.webp';
     const expectedFilePath = `${process.cwd()}/300.webp`;
 
-    expect(await download(url)).toEqual(expectedFilePath);
+    expect((await download(url)).path).toEqual(expectedFilePath);
     expect(fs.existsSync(expectedFilePath)).toBe(true); // Ensure the image is actually exists
 
     // Cleanup
