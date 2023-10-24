@@ -64,8 +64,9 @@ export type Options = Omit<DownloadOptions, 'name'> & {
    * Only called when downloading multiple images.
    *
    * @param error The error that caused the download to fail.
+   * @param url The URL of the image that failed to download.
    */
-  onError?: (error: Error) => void;
+  onError?: (error: Error, url: string) => void;
 };
 
 async function imgdl(url: string, options?: Options): Promise<Image>;
@@ -81,7 +82,7 @@ async function imgdl(url: string | string[], options?: Options): Promise<Image |
       return image;
     }).catch((error) => {
       if (error instanceof Error) {
-        options?.onError?.(error);
+        options?.onError?.(error, u);
       }
     }));
 

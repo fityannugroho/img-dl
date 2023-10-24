@@ -2,6 +2,8 @@
 
 import cliProgress from 'cli-progress';
 import meow from 'meow';
+import fs from 'node:fs';
+import path from 'node:path';
 import ArgumentError from './errors/ArgumentError.js';
 import DirectoryError from './errors/DirectoryError.js';
 import imgdl from './index.js';
@@ -111,6 +113,7 @@ async function main() {
     barsize: 24,
   });
   let success = 0;
+  let errorCount = 0;
 
   if (!flags.silent && urls.length > 1) {
     bar.start(urls.length, 0, { success });
@@ -126,19 +129,28 @@ async function main() {
         bar.increment({ success });
       }
     },
-    onError: (error) => {
+    onError: (error, url) => {
+      errorCount += 1;
       if (!flags.silent) {
         bar.increment();
       }
       if (error instanceof ArgumentError || error instanceof DirectoryError) {
         throw error;
       }
+      fs.appendFileSync(
+        path.resolve(flags.dir || process.cwd(), 'error.log'),
+        `${new Date().toISOString()} failed download from ${url}, ${error.name}: ${error.message}\n`,
+      );
     },
   });
 
   if (!flags.silent) {
     bar.stop();
     console.log('Done!');
+
+    if (errorCount) {
+      console.log(`${errorCount} image${errorCount > 1 ? 's' : ''} failed to download. See ./error.log for details.`);
+    }
   }
 }
 
