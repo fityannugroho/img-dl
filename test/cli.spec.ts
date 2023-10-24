@@ -109,4 +109,48 @@ describe('cli', () => {
       ).rejects.toThrow();
     });
   });
+
+  describe('Increment download', () => {
+    const testUrl = 'https://picsum.photos/200/{i}.webp';
+
+    test('should throw an error if the end index is not specified', async () => {
+      await expect(
+        $`node dist/cli.js ${testUrl} --increment`,
+      ).rejects.toThrow();
+    });
+
+    test('should throw an error if URL more than 1', async () => {
+      await expect(
+        $`node dist/cli.js ${testUrl} ${testUrl} --increment --end=10`,
+      ).rejects.toThrow();
+    });
+
+    test('should throw an error if the start index is greater than the end index', async () => {
+      await expect(
+        $`node dist/cli.js ${testUrl} --increment --start=2 --end=1`,
+      ).rejects.toThrow();
+    });
+
+    test('should throw an error if the URL does not contain the index placeholder', async () => {
+      await expect(
+        $`node dist/cli.js https://picsum.photos/200/300.webp --increment --end=10`,
+      ).rejects.toThrow();
+    });
+
+    test('Valid', async () => {
+      const expectedFilePaths = [
+        `${process.cwd()}/300-1.webp`,
+        `${process.cwd()}/301-2.webp`,
+      ];
+      const { stdout } = await $`node dist/cli.js ${testUrl} --increment --start=300 --end=301`;
+
+      expect(stdout).toMatch('Done!');
+      expectedFilePaths.forEach((filepath) => {
+        expect(fs.existsSync(filepath)).toBe(true);
+
+        // Cleanup
+        fs.unlinkSync(filepath);
+      });
+    }, { timeout: 15000 });
+  });
 });

@@ -10,20 +10,28 @@ const cli = meow(`
   USAGE
     $ imgdl <url> <url2> ... [OPTIONS]
 
+  PARAMETERS
+    url   The URL of the image to download. Can be repeated multiple times.
+          In increment mode, the URL must contain {i} placeholder for the index,
+          only one URL is allowed, and the 'end' flag is required.
+
   OPTIONS
     -d, --dir=<path>          The output directory. Default: current working directory
+        --end=<number>        The end index. Required in increment mode
     -e, --ext=<ext>           The file extension. Default: original extension or jpg
     -h, --help                Show this help message
+    -i, --increment           Enable increment mode. Default: false
     -n, --name=<filename>     The filename. Default: original filename or timestamp
         --silent              Disable logging
+        --start=<number>      The start index for increment mode. Default: 0
     -v, --version             Show the version number
 
   EXAMPLES
     $ imgdl https://example.com/image.jpg
-    $ imgdl https://example.com/image.jpg --dir=images --name=example
     $ imgdl https://example.com/image.jpg --dir=images --name=example --ext=png
-    $ imgdl https://example.com/image.jpg --dir=images --name=example --ext=png --silent
-    $ imgdl https://example.com/image.jpg https://example.com/image2.webp --dir=images
+    $ imgdl https://example.com/image.jpg --silent
+    $ imgdl https://example.com/image.jpg https://example.com/image2.webp
+    $ imgdl https://example.com/image-{i}.jpg --increment --start=1 --end=10
 `, {
   importMeta: import.meta,
   description: 'Download an image from a URL',
@@ -37,6 +45,16 @@ const cli = meow(`
       shortFlag: 'e',
       type: 'string',
     },
+    increment: {
+      shortFlag: 'i',
+      type: 'boolean',
+    },
+    start: {
+      type: 'number',
+    },
+    end: {
+      type: 'number',
+    },
     name: {
       shortFlag: 'n',
       type: 'string',
@@ -48,17 +66,48 @@ const cli = meow(`
 });
 
 async function main() {
-  const urls = cli.input;
+  let urls = cli.input;
   const { flags } = cli;
 
   if (!urls.length) {
     cli.showHelp();
   }
 
+  if (flags.increment) {
+    if (urls.length > 1) {
+      throw new ArgumentError('Only one URL is allowed in increment mode');
+    }
+
+    const templateUrl = urls[0];
+
+    if (!templateUrl.includes('{i}')) {
+      throw new ArgumentError('The URL must contain {i} placeholder for the index');
+    }
+
+    if (!flags.end) {
+      throw new ArgumentError('The end index is required in increment mode');
+    }
+
+    if (flags.start && flags.start > flags.end) {
+      throw new ArgumentError('The start index cannot be greater than the end index');
+    }
+
+    const { start = 0, end } = flags;
+    urls = [];
+
+    for (let i = start; i <= end; i += 1) {
+      urls.push(templateUrl.replace('{i}', i.toString()));
+    }
+  }
+
+  if (!flags.silent) {
+    console.log('\nDownloading...');
+  }
+
   const bar = new cliProgress.SingleBar({
     // eslint-disable-next-line max-len
     format: '{percentage}% [{bar}] {value}/{total} | Success: {success} | ETA: {eta_formatted} | Elapsed: {duration_formatted}',
-    hideCursor: true,
+    hideCursor: null,
     barsize: 24,
   });
   let success = 0;
@@ -89,7 +138,7 @@ async function main() {
 
   if (!flags.silent) {
     bar.stop();
-    console.log('\nDone!');
+    console.log('Done!');
   }
 }
 
