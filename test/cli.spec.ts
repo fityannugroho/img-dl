@@ -16,7 +16,7 @@ describe('cli', () => {
     const expectedFilePath = `${process.cwd()}/300.webp`;
     const { stdout } = await $`node dist/cli.js ${validTestUrl}`;
 
-    expect(stdout).toMatch('Image downloaded successfully');
+    expect(stdout).toMatch('Done!');
     expect(fs.existsSync(expectedFilePath)).toBe(true);
 
     // Cleanup
@@ -27,7 +27,7 @@ describe('cli', () => {
     const expectedFilePath = `${process.cwd()}/images/300.webp`;
     const { stdout } = await $`node dist/cli.js ${validTestUrl} --dir=images`;
 
-    expect(stdout).toMatch('Image downloaded successfully');
+    expect(stdout).toMatch('Done!');
     expect(fs.existsSync(expectedFilePath)).toBe(true);
 
     // Cleanup
@@ -39,7 +39,7 @@ describe('cli', () => {
     const expectedFilePath = `${process.cwd()}/custom-name.webp`;
     const { stdout } = await $`node dist/cli.js ${validTestUrl} --name=custom-name`;
 
-    expect(stdout).toMatch('Image downloaded successfully');
+    expect(stdout).toMatch('Done!');
     expect(fs.existsSync(expectedFilePath)).toBe(true);
 
     // Cleanup
@@ -57,6 +57,12 @@ describe('cli', () => {
     fs.unlinkSync(expectedFilePath);
   }, { timeout: 15000 });
 
+  test('should throw an error if arguments is invalid', async () => {
+    await expect(
+      $`node dist/cli.js ${validTestUrl} --name=test/test`,
+    ).rejects.toThrow();
+  });
+
   test('should throw an error if the directory cannot be created', async () => {
     await expect(
       $`node dist/cli.js ${validTestUrl} --dir=/new-root-dir-no-access`,
@@ -73,5 +79,34 @@ describe('cli', () => {
 
   test('should throw an error if the response is not an image', async () => {
     await expect($`node dist/cli.js https://picsum.photos`).rejects.toThrow();
+  });
+
+  describe('Multiple URLs', () => {
+    const validTestUrls = ['https://picsum.photos/200/300.webp', 'https://picsum.photos/200/300'];
+    const expectedFilePaths = [`${process.cwd()}/300-1.webp`, `${process.cwd()}/image-2.jpg`];
+
+    test('Only URLs', async () => {
+      const { stdout } = await $`node dist/cli.js ${validTestUrls}`;
+
+      expect(stdout).toMatch('Done!');
+      expectedFilePaths.forEach((filepath) => {
+        expect(fs.existsSync(filepath)).toBe(true);
+
+        // Cleanup
+        fs.unlinkSync(filepath);
+      });
+    }, { timeout: 15000 });
+
+    test('should throw an error if arguments is invalid', async () => {
+      await expect(
+        $`node dist/cli.js ${validTestUrls} --name=test/test`,
+      ).rejects.toThrow();
+    });
+
+    test('should throw an error if the directory cannot be created', async () => {
+      await expect(
+        $`node dist/cli.js ${validTestUrls} --dir=/new-root-dir-no-access`,
+      ).rejects.toThrow();
+    });
   });
 });

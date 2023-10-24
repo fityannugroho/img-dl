@@ -70,6 +70,7 @@ export type Options = Omit<DownloadOptions, 'name'> & {
 
 async function imgdl(url: string, options?: Options): Promise<Image>;
 async function imgdl(url: string[], options?: Options): Promise<Image[]>;
+async function imgdl(url: string | string[], options?: Options): Promise<Image | Image[]>;
 async function imgdl(url: string | string[], options?: Options): Promise<Image | Image[]> {
   if (Array.isArray(url)) {
     const promises = url.map((u, i) => download(u, {
