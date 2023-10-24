@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 
+import cliProgress from 'cli-progress';
 import meow from 'meow';
-import imgdl from './index.js';
 import ArgumentError from './errors/ArgumentError.js';
 import DirectoryError from './errors/DirectoryError.js';
+import imgdl from './index.js';
 
 const cli = meow(`
   USAGE
@@ -54,11 +55,32 @@ async function main() {
     cli.showHelp();
   }
 
+  const bar = new cliProgress.SingleBar({
+    // eslint-disable-next-line max-len
+    format: '{percentage}% [{bar}] {value}/{total} | Success: {success} | ETA: {eta_formatted} | Elapsed: {duration_formatted}',
+    hideCursor: true,
+    barsize: 24,
+  });
+  let success = 0;
+
+  if (!flags.silent && urls.length > 1) {
+    bar.start(urls.length, 0, { success });
+  }
+
   await imgdl(urls.length === 1 ? urls[0] : urls, {
     directory: flags.dir,
     name: flags.name,
     extension: flags.ext,
+    onSuccess: () => {
+      if (!flags.silent) {
+        success += 1;
+        bar.increment({ success });
+      }
+    },
     onError: (error) => {
+      if (!flags.silent) {
+        bar.increment();
+      }
       if (error instanceof ArgumentError || error instanceof DirectoryError) {
         throw error;
       }
@@ -66,6 +88,7 @@ async function main() {
   });
 
   if (!flags.silent) {
+    bar.stop();
     console.log('\nDone!');
   }
 }

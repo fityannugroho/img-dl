@@ -39,6 +39,7 @@
     "node": ">=18"
   },
   "devDependencies": {
+    "@types/cli-progress": "^3.11.4",
     "@types/node": "^20.8.6",
     "@typescript-eslint/eslint-plugin": "^6.8.0",
     "@typescript-eslint/parser": "^6.8.0",
@@ -51,6 +52,7 @@
     "vitest": "^0.34.6"
   },
   "dependencies": {
+    "cli-progress": "^3.12.0",
     "meow": "^12.1.1",
     "sanitize-filename": "^1.6.3"
   }
