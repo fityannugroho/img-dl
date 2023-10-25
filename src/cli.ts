@@ -10,10 +10,10 @@ import imgdl from './index.js';
 
 const cli = meow(`
   USAGE
-    $ imgdl <url> <url2> ... [OPTIONS]
+    $ imgdl <url> ... [OPTIONS]
 
   PARAMETERS
-    url   The URL of the image to download. Can be repeated multiple times.
+    url   The URL of the image to download. Provide multiple URLs to download multiple images.
           In increment mode, the URL must contain {i} placeholder for the index,
           only one URL is allowed, and the 'end' flag is required.
 
