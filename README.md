@@ -89,7 +89,7 @@ console.log(image);
 /*
 {
   url: 'https://example.com/image.jpg',
-  name: 'image.jpg',
+  name: 'image',
   extension: 'jpg',
   directory: '/path/to/current/working/directory',
   originalName: 'image',
