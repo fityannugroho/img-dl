@@ -149,7 +149,7 @@ Required: `false`
 ## Comparison
 
 | Features | **img-dl** | [image-downloader][p1] |
-| --- | --- | --- |
+| --- | :---: | :---: |
 | Download single image | ✅ | ✅ |
 | Download multiple images | ✅ | ❌ |
 | CLI | ✅ | ❌ |
