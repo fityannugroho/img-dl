@@ -24,8 +24,10 @@ const cli = meow(`
     -h, --help                Show this help message
     -i, --increment           Enable increment mode. Default: false
     -n, --name=<filename>     The filename. Default: original filename or timestamp
+        --max-retry=<number>  Set the maximum number of times to retry the request if it fails
         --silent              Disable logging
         --start=<number>      The start index for increment mode. Default: 0
+    -t, --timeout=<number>    Set timeout for each request in milliseconds
     -v, --version             Show the version number
 
   EXAMPLES
@@ -61,8 +63,15 @@ const cli = meow(`
       shortFlag: 'n',
       type: 'string',
     },
+    maxRetry: {
+      type: 'number',
+    },
     silent: {
       type: 'boolean',
+    },
+    timeout: {
+      shortFlag: 't',
+      type: 'number',
     },
   },
 });
@@ -142,6 +151,8 @@ async function main() {
         `${new Date().toISOString()} failed download from ${url}, ${error.name}: ${error.message}\n`,
       );
     },
+    maxRetry: flags.maxRetry,
+    timeout: flags.timeout,
   });
 
   if (!flags.silent) {

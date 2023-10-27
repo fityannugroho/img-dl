@@ -28,6 +28,12 @@ export type DownloadOptions = {
    */
   name?: string | ((original?: string) => string);
   /**
+   * Set the maximum number of times to retry the request if it fails.
+   *
+   * @default 2
+   */
+  maxRetry?: number;
+  /**
    * The extension of the image.
    *
    * If not provided, the extension of the URL will be used.
@@ -35,6 +41,10 @@ export type DownloadOptions = {
    * If the URL doesn't have an extension, `jpg` will be used.
    */
   extension?: string;
+  /**
+   * Set timeout for each request in milliseconds.
+   */
+  timeout?: number;
 };
 
 /**
@@ -127,7 +137,14 @@ export async function download(url: string, options: DownloadOptions = {}) {
   }
 
   return new Promise<Image>((resolve, reject) => {
-    const fetchStream = got.stream(img.url);
+    const fetchStream = got.stream(img.url, {
+      timeout: {
+        request: options.timeout,
+      },
+      retry: {
+        limit: options.maxRetry,
+      },
+    });
 
     const onError = (error: unknown) => {
       reject(error);
