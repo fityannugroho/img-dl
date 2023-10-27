@@ -1,10 +1,10 @@
+import { HTTPError, RequestError } from 'got';
 import fs from 'node:fs';
 import { describe, expect, test } from 'vitest';
 import { DEFAULT_EXTENSION, DEFAULT_NAME } from '~/constanta.js';
 import { download, parseImageParams } from '~/downloader.js';
 import ArgumentError from '~/errors/ArgumentError.js';
 import DirectoryError from '~/errors/DirectoryError.js';
-import FetchError from '~/errors/FetchError.js';
 
 describe('`parseImageParams()`', () => {
   const urlTest = 'https://picsum.photos/200/300';
@@ -235,16 +235,16 @@ describe('`download()`', () => {
 
   test('should throw an error if the URL is invalid', async () => {
     const url = 'invalid-url';
-    await expect(download(url)).rejects.toThrow(FetchError);
+    await expect(download(url)).rejects.toThrow(RequestError);
   });
 
   test('should throw an error if the response is unsuccessful', async () => {
     const url = 'https://picsum.photos/xxx';
-    await expect(download(url)).rejects.toThrow(FetchError);
+    await expect(download(url)).rejects.toThrow(HTTPError);
   });
 
   test('should throw an error if the response is not an image', async () => {
     const url = 'https://picsum.photos';
-    await expect(download(url)).rejects.toThrow(FetchError);
+    await expect(download(url)).rejects.toThrow(RequestError);
   });
 });

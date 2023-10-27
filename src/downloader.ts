@@ -1,11 +1,11 @@
+import got, { PlainResponse } from 'got';
 import fs from 'node:fs';
 import path from 'node:path';
 import { pipeline } from 'node:stream/promises';
 import sanitize from 'sanitize-filename';
+import { DEFAULT_EXTENSION, DEFAULT_NAME, imageExtensions } from './constanta.js';
 import ArgumentError from './errors/ArgumentError.js';
 import DirectoryError from './errors/DirectoryError.js';
-import FetchError from './errors/FetchError.js';
-import { DEFAULT_EXTENSION, DEFAULT_NAME, imageExtensions } from './constanta.js';
 import { Image } from './index.js';
 
 export type DownloadOptions = {
@@ -28,6 +28,12 @@ export type DownloadOptions = {
    */
   name?: string | ((original?: string) => string);
   /**
+   * Set the maximum number of times to retry the request if it fails.
+   *
+   * @default 2
+   */
+  maxRetry?: number;
+  /**
    * The extension of the image.
    *
    * If not provided, the extension of the URL will be used.
@@ -35,6 +41,10 @@ export type DownloadOptions = {
    * If the URL doesn't have an extension, `jpg` will be used.
    */
   extension?: string;
+  /**
+   * Set timeout for each request in milliseconds.
+   */
+  timeout?: number;
 };
 
 /**
@@ -109,65 +119,53 @@ export function parseImageParams(url: string, options?: DownloadOptions) {
  * @param options The options to use.
  * @returns The file path.
  * @throws {DirectoryError} If the directory cannot be created.
- * @throws {FetchError} If the URL is invalid or the response is unsuccessful.
+ * @throws {Error} If there are any other errors.
  */
 export async function download(url: string, options: DownloadOptions = {}) {
   const img = parseImageParams(url, options);
 
-  try {
-    // Create the directory if it doesn't exist.
-    if (!fs.existsSync(img.directory)) {
+  // Create the directory if it doesn't exist.
+  if (!fs.existsSync(img.directory)) {
+    try {
       fs.mkdirSync(img.directory, { recursive: true });
-    }
-  } catch (error) {
-    if (error instanceof Error) {
-      if (error.message.includes('EACCES')) {
-        throw new DirectoryError(`Permission denied to create '${img.directory}'`);
+    } catch (error) {
+      if (error instanceof Error) {
+        throw new DirectoryError(error.message);
       }
-      throw new DirectoryError(error.message);
-    } else {
       throw new DirectoryError(`Failed to create '${img.directory}'`);
     }
   }
 
-  let response: Response;
+  return new Promise<Image>((resolve, reject) => {
+    const fetchStream = got.stream(img.url, {
+      timeout: {
+        request: options.timeout,
+      },
+      retry: {
+        limit: options.maxRetry,
+      },
+    });
 
-  try {
-    response = await fetch(url);
-  } catch (error) {
-    if (error instanceof Error) {
-      throw new FetchError(error.message);
-    } else {
-      throw new FetchError('Failed to fetch image');
-    }
-  }
+    const onError = (error: unknown) => {
+      reject(error);
+    };
 
-  if (!response.ok) {
-    throw new FetchError(`Unsuccessful response: ${response.status} ${response.statusText}`);
-  }
-
-  if (response.body === null) {
-    throw new FetchError('Response body is null');
-  }
-
-  // Ensure the response is an image
-  const contentType = response.headers.get('content-type');
-  if (!contentType || !contentType.startsWith('image/')) {
-    throw new FetchError('The response is not an image.');
-  }
-
-  try {
-    await pipeline(response.body, fs.createWriteStream(img.path));
-  } catch (error) {
-    if (error instanceof Error) {
-      if (error.message.includes('EACCES')) {
-        throw new DirectoryError(`Permission denied to save image in '${img.directory}'`);
+    fetchStream.on('response', (res: PlainResponse) => {
+      // Ensure the response is an image
+      const contentType = res.headers['content-type'];
+      if (!contentType || !contentType.startsWith('image/')) {
+        fetchStream.destroy(new Error('The response is not an image.'));
+        return;
       }
-      throw new DirectoryError(error.message);
-    } else {
-      throw new DirectoryError(`Failed to save image in '${img.directory}'`);
-    }
-  }
 
-  return img;
+      // Prevent `onError` being called twice.
+      fetchStream.off('error', onError);
+
+      pipeline(fetchStream, fs.createWriteStream(img.path))
+        .then(() => { resolve(img); }) // Return the image data.
+        .catch((error) => { onError(error); });
+    });
+
+    fetchStream.once('error', onError);
+  });
 }

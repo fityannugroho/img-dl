@@ -47,8 +47,10 @@ OPTIONS
   -h, --help                Show this help message
   -i, --increment           Enable increment mode. Default: false
   -n, --name=<filename>     The filename. Default: original filename or timestamp
+      --max-retry=<number>  Set the maximum number of times to retry the request if it fails
       --silent              Disable logging
       --start=<number>      The start index for increment mode. Default: 0
+  -t, --timeout=<number>    Set timeout for each request in milliseconds
   -v, --version             Show the version number
 
 EXAMPLES
@@ -133,5 +135,7 @@ Required: `false`
 | `options.directory` | `string` | `process.cwd()` | The output directory |
 | `options.extension` | `string` | `'jpg'` | The file extension. If not specified, the original extension will be used. If the original extension is not available, `'jpg'` will be used. |
 | `options.name` | `string` | `'image'` | The filename. If not specified, the original filename will be used. If the original filename is not available, `'image'` will be used. <br>When downloading multiple images, `-index` will be appended to the end of the name (suffix). `index` will start from 1. For example: `image-1` |
+| `options.maxRetry` | `number` | `2` | Set the maximum number of times to retry the request if it fails.
 | `options.onSuccess` | `(image: Image) => void` | `undefined` | The callback function to be called when the image is successfully downloaded. Only available when downloading multiple images. |
 | `options.onError` | `(error: Error, url: string) => void` | `undefined` | The callback function to be called when the image fails to download. Only available when downloading multiple images. |
+| `options.timeout` | `number` | `undefined` | Set timeout for each request in milliseconds.
