@@ -1,0 +1,71 @@
+name: Bug Report
+description: File a bug report
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: checkboxes
+    id: contributing
+    attributes:
+      label: Contributing Guidelines
+      description: By submitting this issue, you agree to follow our [Contributing Guidelines](https://github.com/fityannugroho/.github/blob/main/CONTRIBUTING.md)
+      options:
+        - label: I have read and agree to follow this project's Contributing Guidelines
+          required: true
+  - type: checkboxes
+    attributes:
+      label: Is there an existing issue for this?
+      description: Please search to see if an issue already exists for the bug you encountered.
+      options:
+      - label: I have searched the existing issues
+        required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: |
+        In which version did you find this bug?
+        You can also use range if this bug appears in multiple versions.
+        Ex. <=1.0.0 or >=1.0.0 or 1.0.0 - 2.0.0
+      placeholder: ex. 1.0.0
+    validations:
+      required: true
+  - type: textarea
+    id: bug-description
+    attributes:
+      label: Describe the bug
+      description: |
+        A clear and concise description of what the bug is.
+        Also explain how to reproduce it (step-by-step).
+      placeholder: |
+        Ex. function A does not work when ...
+        Steps:
+        1. Import ...
+        2. Add value ...
+        3. Run with ...
+        4. See error ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: |
+        A clear and concise description of what you expected to happen.
+      placeholder: |
+        Ex. function A should return ...
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant log output
+      description: Please copy and paste any relevant log output. This will be automatically formatted into code, so no need for backticks.
+      render: shell
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: Code of Conduct
+      description: By submitting this issue, you agree to follow our [Code of Conduct](https://github.com/fityannugroho/.github/blob/main/CODE_OF_CONDUCT.md)
+      options:
+        - label: I agree to follow this project's Code of Conduct
+          required: true
