@@ -1,6 +1,6 @@
 {
   "name": "img-dl",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Download image(s), by command or programmatically",
   "type": "module",
   "main": "dist/index.js",
