@@ -2,6 +2,13 @@ export const DEFAULT_NAME = 'image';
 
 export const DEFAULT_EXTENSION = 'jpg';
 
+export const DEFAULT_STEP = 5;
+
+/**
+ * In milliseconds.
+ */
+export const DEFAULT_INTERVAL = 100;
+
 /**
  * The valid image extensions.
  *

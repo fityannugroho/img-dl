@@ -16,6 +16,10 @@ export type DownloadOptions = {
    */
   directory?: string;
   /**
+   * The headers to send with the request.
+   */
+  headers?: Record<string, string | string[] | undefined>;
+  /**
    * The name of the image file.
    *
    * You also can provide a function that returns the name.
@@ -144,6 +148,7 @@ export async function download(url: string, options: DownloadOptions = {}) {
       retry: {
         limit: options.maxRetry,
       },
+      headers: options.headers,
     });
 
     const onError = (error: unknown) => {

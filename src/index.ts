@@ -1,4 +1,5 @@
-import { DEFAULT_NAME } from './constanta.js';
+import PQueue from 'p-queue';
+import { DEFAULT_INTERVAL, DEFAULT_NAME, DEFAULT_STEP } from './constanta.js';
 import { DownloadOptions, download } from './downloader.js';
 
 export type Image = {
@@ -67,6 +68,18 @@ export type Options = Omit<DownloadOptions, 'name'> & {
    * @param url The URL of the image that failed to download.
    */
   onError?: (error: Error, url: string) => void;
+  /**
+   * The number of requests to make at the same time.
+   *
+   * @default 5
+   */
+  step?: number;
+  /**
+   * The interval between each batch of requests in milliseconds.
+   *
+   * @default 100
+   */
+  interval?: number;
 };
 
 async function imgdl(url: string, options?: Options): Promise<Image>;
@@ -74,7 +87,13 @@ async function imgdl(url: string[], options?: Options): Promise<Image[]>;
 async function imgdl(url: string | string[], options?: Options): Promise<Image | Image[]>;
 async function imgdl(url: string | string[], options?: Options): Promise<Image | Image[]> {
   if (Array.isArray(url)) {
-    const promises = url.map((u, i) => download(u, {
+    const queue = new PQueue({
+      concurrency: options?.step ?? DEFAULT_STEP,
+      interval: options?.interval ?? DEFAULT_INTERVAL,
+      intervalCap: options?.step ?? DEFAULT_STEP,
+    });
+
+    const promises = url.map((u, i) => queue.add(() => download(u, {
       ...options,
       name: (ori) => `${options?.name ?? ori ?? DEFAULT_NAME}-${i + 1}`,
     }).then((image) => {
@@ -84,7 +103,7 @@ async function imgdl(url: string | string[], options?: Options): Promise<Image |
       if (error instanceof Error) {
         options?.onError?.(error, u);
       }
-    }));
+    })));
 
     return (await Promise.all(promises)).filter((img): img is Image => img !== undefined);
   }
