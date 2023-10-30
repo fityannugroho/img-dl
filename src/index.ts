@@ -75,7 +75,7 @@ export type Options = Omit<DownloadOptions, 'name'> & {
    */
   step?: number;
   /**
-   * The length of time in milliseconds before the next request is made.
+   * The interval between each batch of requests in milliseconds.
    *
    * @default 100
    */

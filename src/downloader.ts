@@ -16,7 +16,7 @@ export type DownloadOptions = {
    */
   directory?: string;
   /**
-   * The headers to use for the request.
+   * The headers to send with the request.
    */
   headers?: Record<string, string | string[] | undefined>;
   /**

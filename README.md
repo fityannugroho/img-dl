@@ -36,7 +36,7 @@ npm install img-dl
 Access the help page with `imgdl --help`
 
 ```
-Download an image from a URL
+Download image(s), by command or programmatically
 
 USAGE
   $ imgdl <url> ... [OPTIONS]
@@ -51,11 +51,14 @@ OPTIONS
       --end=<number>        The end index. Required in increment mode
   -e, --ext=<ext>           The file extension. Default: original extension or jpg
   -h, --help                Show this help message
+  -H, --header=<header>     The header to send with the request. Can be used multiple times
   -i, --increment           Enable increment mode. Default: false
+      --interval=<number>   The interval between each batch of requests in milliseconds
   -n, --name=<filename>     The filename. Default: original filename or timestamp
       --max-retry=<number>  Set the maximum number of times to retry the request if it fails
       --silent              Disable logging
       --start=<number>      The start index for increment mode. Default: 0
+      --step=<number>       The number of requests to make at the same time. Default: 5
   -t, --timeout=<number>    Set timeout for each request in milliseconds
   -v, --version             Show the version number
 
@@ -65,6 +68,7 @@ EXAMPLES
   $ imgdl https://example.com/image.jpg --silent
   $ imgdl https://example.com/image.jpg https://example.com/image2.webp
   $ imgdl https://example.com/image-{i}.jpg --increment --start=1 --end=10
+  $ imgdl https://example.com/image.jpg --header="User-Agent: Mozilla/5.0" --header="Cookie: foo=bar"
 ```
 
 #### Simple download
@@ -140,10 +144,13 @@ Required: `false`
 | --- | --- | --- | --- |
 | `directory` | `string` | `process.cwd()` | The output directory |
 | `extension` | `string` | jpg | The file extension. If not specified, the original extension will be used. If the original extension is not available, 'jpg' will be used. |
+| `headers` | `Record<string, string \| string[] \| undefined>` | `undefined` | The headers to send with the request. |
+| `interval` | `number` | 100 | The interval between each batch of requests in milliseconds when downloading multiple images. |
 | `name` | `string` | image | The filename. If not specified, the original filename will be used. If the original filename is not available, 'image' will be used. <br>When downloading multiple images, `-index` will be appended to the end of the name (suffix). `index` will start from 1. For example: 'image-1' |
 | `maxRetry` | `number` | 2 | Set the maximum number of times to retry the request if it fails.
 | `onSuccess` | `(image: Image) => void` | `undefined` | The callback function to be called when the image is successfully downloaded. Only available when downloading multiple images. |
 | `onError` | `(error: Error, url: string) => void` | `undefined` | The callback function to be called when the image fails to download. Only available when downloading multiple images. |
+| `step` | `number` | 5 | The number of requests to make at the same time when downloading multiple images. |
 | `timeout` | `number` | `undefined` | Set timeout for each request in milliseconds.
 
 ## Comparison

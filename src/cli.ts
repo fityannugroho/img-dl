@@ -42,7 +42,6 @@ const cli = meow(`
     $ imgdl https://example.com/image.jpg --header="User-Agent: Mozilla/5.0" --header="Cookie: foo=bar"
 `, {
   importMeta: import.meta,
-  description: 'Download an image from a URL',
   booleanDefault: undefined,
   flags: {
     dir: {
