@@ -6,7 +6,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import ArgumentError from './errors/ArgumentError.js';
 import DirectoryError from './errors/DirectoryError.js';
-import imgdl from './index.js';
+import imgdl, { Options } from './index.js';
 
 const cli = meow(`
   USAGE
@@ -22,11 +22,14 @@ const cli = meow(`
         --end=<number>        The end index. Required in increment mode
     -e, --ext=<ext>           The file extension. Default: original extension or jpg
     -h, --help                Show this help message
+    -H, --header=<header>     The header to send with the request. Can be used multiple times
     -i, --increment           Enable increment mode. Default: false
+        --interval=<number>   The interval between each batch of requests in milliseconds
     -n, --name=<filename>     The filename. Default: original filename or timestamp
         --max-retry=<number>  Set the maximum number of times to retry the request if it fails
         --silent              Disable logging
         --start=<number>      The start index for increment mode. Default: 0
+        --step=<number>       The number of requests to make at the same time. Default: 5
     -t, --timeout=<number>    Set timeout for each request in milliseconds
     -v, --version             Show the version number
 
@@ -36,6 +39,7 @@ const cli = meow(`
     $ imgdl https://example.com/image.jpg --silent
     $ imgdl https://example.com/image.jpg https://example.com/image2.webp
     $ imgdl https://example.com/image-{i}.jpg --increment --start=1 --end=10
+    $ imgdl https://example.com/image.jpg --header="User-Agent: Mozilla/5.0" --header="Cookie: foo=bar"
 `, {
   importMeta: import.meta,
   description: 'Download an image from a URL',
@@ -49,9 +53,17 @@ const cli = meow(`
       shortFlag: 'e',
       type: 'string',
     },
+    header: {
+      shortFlag: 'H',
+      type: 'string',
+      isMultiple: true,
+    },
     increment: {
       shortFlag: 'i',
       type: 'boolean',
+    },
+    interval: {
+      type: 'number',
     },
     start: {
       type: 'number',
@@ -68,6 +80,9 @@ const cli = meow(`
     },
     silent: {
       type: 'boolean',
+    },
+    step: {
+      type: 'number',
     },
     timeout: {
       shortFlag: 't',
@@ -128,10 +143,26 @@ async function main() {
     bar.start(urls.length, 0, { success });
   }
 
+  // Validate and convert headers
+  const headers: Options['headers'] = {};
+  if (flags.header) {
+    flags.header.forEach((header) => {
+      const [name, value] = header.split(':');
+
+      if (!name || !value) {
+        throw new ArgumentError('Invalid header format');
+      }
+
+      headers[name.trim()] = value.trim();
+    });
+  }
+
   await imgdl(urls.length === 1 ? urls[0] : urls, {
     directory: flags.dir,
     name: flags.name,
     extension: flags.ext,
+    headers,
+    interval: flags.interval,
     onSuccess: () => {
       if (!flags.silent) {
         success += 1;
@@ -152,6 +183,7 @@ async function main() {
       );
     },
     maxRetry: flags.maxRetry,
+    step: flags.step,
     timeout: flags.timeout,
   });
 
