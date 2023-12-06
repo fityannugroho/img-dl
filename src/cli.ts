@@ -156,6 +156,13 @@ async function main() {
     });
   }
 
+  const abortController = new AbortController();
+
+  process.on('SIGINT', () => {
+    bar.stop();
+    abortController.abort();
+  });
+
   await imgdl(urls.length === 1 ? urls[0] : urls, {
     directory: flags.dir,
     name: flags.name,
@@ -184,6 +191,7 @@ async function main() {
     maxRetry: flags.maxRetry,
     step: flags.step,
     timeout: flags.timeout,
+    signal: abortController.signal,
   });
 
   if (!flags.silent) {

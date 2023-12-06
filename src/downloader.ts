@@ -49,6 +49,10 @@ export type DownloadOptions = {
    * Set timeout for each request in milliseconds.
    */
   timeout?: number;
+  /**
+   * The signal which can be used to abort requests.
+   */
+  signal?: AbortSignal;
 };
 
 /**
@@ -149,6 +153,7 @@ export async function download(url: string, options: DownloadOptions = {}) {
         limit: options.maxRetry,
       },
       headers: options.headers,
+      signal: options.signal,
     });
 
     const onError = (error: unknown) => {

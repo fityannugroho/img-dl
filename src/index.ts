@@ -1,4 +1,4 @@
-import PQueue from 'p-queue';
+import PQueue, { AbortError } from 'p-queue';
 import { DEFAULT_INTERVAL, DEFAULT_NAME, DEFAULT_STEP } from './constanta.js';
 import { DownloadOptions, download } from './downloader.js';
 
@@ -80,6 +80,10 @@ export type Options = Omit<DownloadOptions, 'name'> & {
    * @default 100
    */
   interval?: number;
+  /**
+   * The signal which can be used to abort requests.
+   */
+  signal?: AbortSignal;
 };
 
 async function imgdl(url: string, options?: Options): Promise<Image>;
@@ -103,12 +107,21 @@ async function imgdl(url: string | string[], options?: Options): Promise<Image |
       if (error instanceof Error) {
         options?.onError?.(error, u);
       }
-    })));
+      return undefined;
+    }), { signal: options?.signal }).catch((error) => {
+      if (!(error instanceof AbortError)) {
+        throw error;
+      }
+      return undefined;
+    }));
 
     return (await Promise.all(promises)).filter((img): img is Image => img !== undefined);
   }
 
-  return download(url, options);
+  return download(url, {
+    ...options,
+    signal: options?.signal,
+  });
 }
 
 export default imgdl;
