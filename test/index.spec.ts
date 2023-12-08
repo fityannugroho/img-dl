@@ -25,7 +25,7 @@ describe('`imgdl()`', () => {
       const expectedFilePaths = expectedNames.map((n) => `${process.cwd()}/${n}`);
       const images = await imgdl(testUrls);
 
-      expect(images.map((img) => img.path)).toEqual(expectedFilePaths);
+      expect(images.map((img) => img.path).sort()).toEqual(expectedFilePaths.sort());
       expectedFilePaths.forEach((filepath) => {
         expect(fs.existsSync(filepath)).toBe(true); // Ensure the image is actually exists
         fs.unlinkSync(filepath); // Cleanup
@@ -37,7 +37,7 @@ describe('`imgdl()`', () => {
       const expectedFilePaths = expectedNames.map((n) => `${process.cwd()}/${directory}/${n}`);
       const images = await imgdl(testUrls, { directory });
 
-      expect(images.map((img) => img.path)).toEqual(expectedFilePaths);
+      expect(images.map((img) => img.path).sort()).toEqual(expectedFilePaths.sort());
       expectedFilePaths.forEach((filepath) => {
         expect(fs.existsSync(filepath)).toBe(true); // Ensure the image is actually exists
         fs.unlinkSync(filepath); // Cleanup
@@ -48,7 +48,7 @@ describe('`imgdl()`', () => {
       const expectedFilePaths = ['asset-1.webp', 'asset-2.jpg'].map((n) => `${process.cwd()}/${n}`);
       const images = await imgdl(testUrls, { name: 'asset' });
 
-      expect(images.map((img) => img.path)).toEqual(expectedFilePaths);
+      expect(images.map((img) => img.path).sort()).toEqual(expectedFilePaths.sort());
       expectedFilePaths.forEach((filepath) => {
         expect(fs.existsSync(filepath)).toBe(true); // Ensure the image is actually exists
         fs.unlinkSync(filepath); // Cleanup
@@ -61,7 +61,7 @@ describe('`imgdl()`', () => {
       const onSuccess = vi.fn().mockImplementation(() => { downloadCount += 1; });
       const images = await imgdl(testUrls, { onSuccess });
 
-      expect(images.map((img) => img.path)).toEqual(expectedFilePaths);
+      expect(images.map((img) => img.path).sort()).toEqual(expectedFilePaths.sort());
       expect(onSuccess).toHaveBeenCalledTimes(2);
       expect(downloadCount).toEqual(2);
 

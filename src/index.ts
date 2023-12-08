@@ -1,4 +1,5 @@
-import PQueue from 'p-queue';
+import PQueue, { AbortError } from 'p-queue';
+import { setMaxListeners } from 'node:events';
 import { DEFAULT_INTERVAL, DEFAULT_NAME, DEFAULT_STEP } from './constanta.js';
 import { DownloadOptions, download } from './downloader.js';
 
@@ -80,6 +81,10 @@ export type Options = Omit<DownloadOptions, 'name'> & {
    * @default 100
    */
   interval?: number;
+  /**
+   * The signal which can be used to abort requests.
+   */
+  signal?: AbortSignal;
 };
 
 async function imgdl(url: string, options?: Options): Promise<Image>;
@@ -93,22 +98,54 @@ async function imgdl(url: string | string[], options?: Options): Promise<Image |
       intervalCap: options?.step ?? DEFAULT_STEP,
     });
 
-    const promises = url.map((u, i) => queue.add(() => download(u, {
-      ...options,
-      name: (ori) => `${options?.name ?? ori ?? DEFAULT_NAME}-${i + 1}`,
-    }).then((image) => {
-      options?.onSuccess?.(image);
-      return image;
-    }).catch((error) => {
-      if (error instanceof Error) {
-        options?.onError?.(error, u);
-      }
-    })));
+    // Set max listeners to infinity to prevent memory leak warning
+    if (options?.signal) {
+      setMaxListeners(Infinity, options.signal);
+    }
 
-    return (await Promise.all(promises)).filter((img): img is Image => img !== undefined);
+    return new Promise<Image[]>((resolve, reject) => {
+      const images: Image[] = [];
+
+      url.forEach((u, i) => {
+        queue.add(async ({ signal }) => {
+          try {
+            return await download(u, {
+              ...options,
+              name: (ori) => `${options?.name ?? ori ?? DEFAULT_NAME}-${i + 1}`,
+              signal,
+            });
+          } catch (error) {
+            if (error instanceof Error) {
+              options?.onError?.(error, u);
+              return undefined;
+            }
+            throw error;
+          }
+        }, { signal: options?.signal })
+          .then((image) => {
+            if (image) {
+              options?.onSuccess?.(image);
+              images.push(image);
+            }
+          }).catch((error) => {
+            if (!(error instanceof AbortError)) {
+              reject(error);
+            }
+          });
+      });
+
+      queue.onIdle().then(() => {
+        resolve(images);
+      }).catch((error) => {
+        reject(error);
+      });
+    });
   }
 
-  return download(url, options);
+  return download(url, {
+    ...options,
+    signal: options?.signal,
+  });
 }
 
 export default imgdl;

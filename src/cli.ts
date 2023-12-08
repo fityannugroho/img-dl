@@ -4,6 +4,7 @@ import cliProgress from 'cli-progress';
 import meow from 'meow';
 import fs from 'node:fs';
 import path from 'node:path';
+import chalk from 'chalk';
 import ArgumentError from './errors/ArgumentError.js';
 import DirectoryError from './errors/DirectoryError.js';
 import imgdl, { Options } from './index.js';
@@ -90,6 +91,11 @@ const cli = meow(`
   },
 });
 
+const successLog = chalk.bold.green;
+const errorLog = chalk.bold.red;
+const warningLog = chalk.yellow;
+const dimLog = chalk.dim;
+
 async function main() {
   let urls = cli.input;
   const { flags } = cli;
@@ -126,12 +132,13 @@ async function main() {
   }
 
   if (!flags.silent) {
-    console.log('\nDownloading...');
+    console.log(`\n${dimLog('Downloading...')}\n${warningLog('Press Ctrl+C to abort')}`);
   }
 
+  const separator = dimLog('|');
   const bar = new cliProgress.SingleBar({
     // eslint-disable-next-line max-len
-    format: '{percentage}% [{bar}] {value}/{total} | Success: {success} | ETA: {eta_formatted} | Elapsed: {duration_formatted}',
+    format: `{percentage}% [{bar}] {value}/{total} ${separator} ${successLog('✅ {success}')} ${separator} ${errorLog('❌ {errorCount}')} ${separator} ETA: {eta_formatted} ${dimLog('/ {duration_formatted}')}`,
     hideCursor: null,
     barsize: 24,
   });
@@ -139,7 +146,7 @@ async function main() {
   let errorCount = 0;
 
   if (!flags.silent && urls.length > 1) {
-    bar.start(urls.length, 0, { success });
+    bar.start(urls.length, 0, { success, errorCount });
   }
 
   // Validate and convert headers
@@ -156,6 +163,14 @@ async function main() {
     });
   }
 
+  const abortController = new AbortController();
+
+  process.on('SIGINT', () => {
+    bar.stop();
+    console.log(dimLog('\nAborting...'));
+    abortController.abort();
+  });
+
   await imgdl(urls.length === 1 ? urls[0] : urls, {
     directory: flags.dir,
     name: flags.name,
@@ -171,7 +186,7 @@ async function main() {
     onError: (error, url) => {
       errorCount += 1;
       if (!flags.silent) {
-        bar.increment();
+        bar.increment({ errorCount });
       }
       if (error instanceof ArgumentError || error instanceof DirectoryError) {
         throw error;
@@ -184,19 +199,22 @@ async function main() {
     maxRetry: flags.maxRetry,
     step: flags.step,
     timeout: flags.timeout,
+    signal: abortController.signal,
   });
 
   if (!flags.silent) {
     bar.stop();
-    console.log('Done!');
+    console.log(dimLog('Done!'));
 
     if (errorCount) {
-      console.log(`${errorCount} image${errorCount > 1 ? 's' : ''} failed to download. See ./error.log for details.`);
+      console.log(errorLog(
+        `${errorCount} image${errorCount > 1 ? 's' : ''} failed to download. See ./error.log for details.`,
+      ));
     }
   }
 }
 
 main().catch((error: Error) => {
-  console.error(`${error.name}: ${error.message}`);
+  console.error(errorLog(`\n${error.name}: ${error.message}`));
   process.exit(1);
 });
