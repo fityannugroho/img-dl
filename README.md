@@ -150,6 +150,7 @@ Required: `false`
 | `maxRetry` | `number` | 2 | Set the maximum number of times to retry the request if it fails.
 | `onSuccess` | `(image: Image) => void` | `undefined` | The callback function to be called when the image is successfully downloaded. Only available when downloading multiple images. |
 | `onError` | `(error: Error, url: string) => void` | `undefined` | The callback function to be called when the image fails to download. Only available when downloading multiple images. |
+| `signal` | `AbortSignal \| undefined` | The signal to abort the request. |
 | `step` | `number` | 5 | The number of requests to make at the same time when downloading multiple images. |
 | `timeout` | `number` | `undefined` | Set timeout for each request in milliseconds.
 
