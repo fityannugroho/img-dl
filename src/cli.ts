@@ -126,12 +126,12 @@ async function main() {
   }
 
   if (!flags.silent) {
-    console.log('\nDownloading...');
+    console.log('\nDownloading... (press Ctrl+C to abort)');
   }
 
   const bar = new cliProgress.SingleBar({
     // eslint-disable-next-line max-len
-    format: '{percentage}% [{bar}] {value}/{total} | Success: {success} | ETA: {eta_formatted} | Elapsed: {duration_formatted}',
+    format: '{percentage}% [{bar}] {value}/{total} | Success: {success} | ETA: {eta_formatted} / {duration_formatted}',
     hideCursor: null,
     barsize: 24,
   });
@@ -160,6 +160,7 @@ async function main() {
 
   process.on('SIGINT', () => {
     bar.stop();
+    console.log('\nAborting...');
     abortController.abort();
   });
 
