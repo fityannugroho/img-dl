@@ -9,8 +9,8 @@ import ArgumentError from './errors/ArgumentError.js';
 import DirectoryError from './errors/DirectoryError.js';
 import imgdl, { Options } from './index.js';
 
-const cli = meow(`
-  USAGE
+const cli = meow(
+  `USAGE
     $ imgdl <url> ... [OPTIONS]
 
   PARAMETERS
@@ -41,55 +41,57 @@ const cli = meow(`
     $ imgdl https://example.com/image.jpg https://example.com/image2.webp
     $ imgdl https://example.com/image-{i}.jpg --increment --start=1 --end=10
     $ imgdl https://example.com/image.jpg --header="User-Agent: Mozilla/5.0" --header="Cookie: foo=bar"
-`, {
-  importMeta: import.meta,
-  booleanDefault: undefined,
-  flags: {
-    dir: {
-      shortFlag: 'd',
-      type: 'string',
-    },
-    ext: {
-      shortFlag: 'e',
-      type: 'string',
-    },
-    header: {
-      shortFlag: 'H',
-      type: 'string',
-      isMultiple: true,
-    },
-    increment: {
-      shortFlag: 'i',
-      type: 'boolean',
-    },
-    interval: {
-      type: 'number',
-    },
-    start: {
-      type: 'number',
-    },
-    end: {
-      type: 'number',
-    },
-    name: {
-      shortFlag: 'n',
-      type: 'string',
-    },
-    maxRetry: {
-      type: 'number',
-    },
-    silent: {
-      type: 'boolean',
-    },
-    step: {
-      type: 'number',
-    },
-    timeout: {
-      shortFlag: 't',
-      type: 'number',
+`,
+  {
+    importMeta: import.meta,
+    booleanDefault: undefined,
+    flags: {
+      dir: {
+        shortFlag: 'd',
+        type: 'string',
+      },
+      ext: {
+        shortFlag: 'e',
+        type: 'string',
+      },
+      header: {
+        shortFlag: 'H',
+        type: 'string',
+        isMultiple: true,
+      },
+      increment: {
+        shortFlag: 'i',
+        type: 'boolean',
+      },
+      interval: {
+        type: 'number',
+      },
+      start: {
+        type: 'number',
+      },
+      end: {
+        type: 'number',
+      },
+      name: {
+        shortFlag: 'n',
+        type: 'string',
+      },
+      maxRetry: {
+        type: 'number',
+      },
+      silent: {
+        type: 'boolean',
+      },
+      step: {
+        type: 'number',
+      },
+      timeout: {
+        shortFlag: 't',
+        type: 'number',
+      },
     },
   },
-});
+);
 
 const successLog = chalk.bold.green;
 const errorLog = chalk.bold.red;
@@ -112,7 +114,9 @@ async function main() {
     const templateUrl = urls[0];
 
     if (!templateUrl.includes('{i}')) {
-      throw new ArgumentError('The URL must contain {i} placeholder for the index');
+      throw new ArgumentError(
+        'The URL must contain {i} placeholder for the index',
+      );
     }
 
     if (!flags.end) {
@@ -120,7 +124,9 @@ async function main() {
     }
 
     if (flags.start && flags.start > flags.end) {
-      throw new ArgumentError('The start index cannot be greater than the end index');
+      throw new ArgumentError(
+        'The start index cannot be greater than the end index',
+      );
     }
 
     const { start = 0, end } = flags;
@@ -132,7 +138,9 @@ async function main() {
   }
 
   if (!flags.silent) {
-    console.log(`\n${dimLog('Downloading...')}\n${warningLog('Press Ctrl+C to abort')}`);
+    console.log(
+      `\n${dimLog('Downloading...')}\n${warningLog('Press Ctrl+C to abort')}`,
+    );
   }
 
   const separator = dimLog('|');
@@ -207,9 +215,11 @@ async function main() {
     console.log(dimLog('Done!'));
 
     if (errorCount) {
-      console.log(errorLog(
-        `${errorCount} image${errorCount > 1 ? 's' : ''} failed to download. See ./error.log for details.`,
-      ));
+      console.log(
+        errorLog(
+          `${errorCount} image${errorCount > 1 ? 's' : ''} failed to download. See ./error.log for details.`,
+        ),
+      );
     }
   }
 }

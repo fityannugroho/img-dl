@@ -90,8 +90,14 @@ export type Options = Omit<DownloadOptions, 'name'> & {
 
 async function imgdl(url: string, options?: Options): Promise<Image>;
 async function imgdl(url: string[], options?: Options): Promise<Image[]>;
-async function imgdl(url: string | string[], options?: Options): Promise<Image | Image[]>;
-async function imgdl(url: string | string[], options?: Options): Promise<Image | Image[]> {
+async function imgdl(
+  url: string | string[],
+  options?: Options,
+): Promise<Image | Image[]>;
+async function imgdl(
+  url: string | string[],
+  options?: Options,
+): Promise<Image | Image[]> {
   if (Array.isArray(url)) {
     const queue = new PQueue({
       concurrency: options?.step ?? DEFAULT_STEP,
@@ -108,38 +114,47 @@ async function imgdl(url: string | string[], options?: Options): Promise<Image |
       const images: Image[] = [];
 
       url.forEach((u, i) => {
-        queue.add(async ({ signal }) => {
-          try {
-            return await download(u, {
-              ...options,
-              name: (ori) => `${options?.name ?? ori ?? DEFAULT_NAME}-${i + 1}`,
-              signal,
-            });
-          } catch (error) {
-            if (error instanceof Error) {
-              options?.onError?.(error, u);
-              return undefined;
-            }
-            throw error;
-          }
-        }, { signal: options?.signal })
+        queue
+          .add(
+            async ({ signal }) => {
+              try {
+                return await download(u, {
+                  ...options,
+                  name: (ori) =>
+                    `${options?.name ?? ori ?? DEFAULT_NAME}-${i + 1}`,
+                  signal,
+                });
+              } catch (error) {
+                if (error instanceof Error) {
+                  options?.onError?.(error, u);
+                  return undefined;
+                }
+                throw error;
+              }
+            },
+            { signal: options?.signal },
+          )
           .then((image) => {
             if (image) {
               options?.onSuccess?.(image);
               images.push(image);
             }
-          }).catch((error) => {
+          })
+          .catch((error) => {
             if (!(error instanceof CancelError)) {
               reject(error);
             }
           });
       });
 
-      queue.onIdle().then(() => {
-        resolve(images);
-      }).catch((error) => {
-        reject(error);
-      });
+      queue
+        .onIdle()
+        .then(() => {
+          resolve(images);
+        })
+        .catch((error) => {
+          reject(error);
+        });
     });
   }
 

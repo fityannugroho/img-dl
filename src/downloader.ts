@@ -3,7 +3,11 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { pipeline } from 'node:stream/promises';
 import sanitize from 'sanitize-filename';
-import { DEFAULT_EXTENSION, DEFAULT_NAME, imageExtensions } from './constanta.js';
+import {
+  DEFAULT_EXTENSION,
+  DEFAULT_NAME,
+  imageExtensions,
+} from './constanta.js';
 import ArgumentError from './errors/ArgumentError.js';
 import DirectoryError from './errors/DirectoryError.js';
 import { Image } from './index.js';
@@ -67,8 +71,11 @@ export function parseImageParams(url: string, options?: DownloadOptions) {
     url,
     name: '',
     extension: '',
-    directory: options?.directory ? path.normalize(options.directory) : process.cwd(),
-    originalName: originalExt === '' ? undefined : path.basename(url, `.${originalExt}`),
+    directory: options?.directory
+      ? path.normalize(options.directory)
+      : process.cwd(),
+    originalName:
+      originalExt === '' ? undefined : path.basename(url, `.${originalExt}`),
     originalExtension: originalExt === '' ? undefined : originalExt,
     path: '',
   };
@@ -102,8 +109,8 @@ export function parseImageParams(url: string, options?: DownloadOptions) {
   // Set extension
   if (options?.extension) {
     if (
-      !lowerImgExts.includes(options.extension.toLowerCase())
-      || options.extension.includes('.')
+      !lowerImgExts.includes(options.extension.toLowerCase()) ||
+      options.extension.includes('.')
     ) {
       throw new ArgumentError('Invalid `extension` value');
     }
@@ -112,7 +119,8 @@ export function parseImageParams(url: string, options?: DownloadOptions) {
 
   if (img.extension === '') {
     img.extension = lowerImgExts.includes(originalExt.toLowerCase())
-      ? originalExt : DEFAULT_EXTENSION;
+      ? originalExt
+      : DEFAULT_EXTENSION;
   }
 
   // Set path
@@ -172,8 +180,12 @@ export async function download(url: string, options: DownloadOptions = {}) {
       fetchStream.off('error', onError);
 
       pipeline(fetchStream, fs.createWriteStream(img.path))
-        .then(() => { resolve(img); }) // Return the image data.
-        .catch((error) => { onError(error); });
+        .then(() => {
+          resolve(img);
+        }) // Return the image data.
+        .catch((error) => {
+          onError(error);
+        });
     });
 
     fetchStream.once('error', onError);
