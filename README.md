@@ -7,7 +7,6 @@ Downloade image(s), by command or programmatically. The alternative for `image-d
 [![npm downloads](https://img.shields.io/npm/dm/img-dl.svg)](https://www.npmjs.com/package/img-dl)
 [![install size](https://packagephobia.com/badge?p=img-dl)](https://packagephobia.com/result?p=img-dl)
 
-
 ## Prerequisites
 
 - Node.js 18 or later
@@ -140,35 +139,99 @@ The URL(s) of the image(s) to download. Required.
 Type: [`Options`](https://github.com/fityannugroho/img-dl/blob/main/src/index.ts#L35) <br>
 Required: `false`
 
-| Properties | Type | Default | Description |
-| --- | --- | --- | --- |
-| `directory` | `string` | `process.cwd()` | The output directory |
-| `extension` | `string` | jpg | The file extension. If not specified, the original extension will be used. If the original extension is not available, 'jpg' will be used. |
-| `headers` | `Record<string, string \| string[] \| undefined>` | `undefined` | The headers to send with the request. |
-| `interval` | `number` | 100 | The interval between each batch of requests in milliseconds when downloading multiple images. |
-| `name` | `string` | image | The filename. If not specified, the original filename will be used. If the original filename is not available, 'image' will be used. <br>When downloading multiple images, `-index` will be appended to the end of the name (suffix). `index` will start from 1. For example: 'image-1' |
-| `maxRetry` | `number` | 2 | Set the maximum number of times to retry the request if it fails.
-| `onSuccess` | `(image: Image) => void` | `undefined` | The callback function to be called when the image is successfully downloaded. Only available when downloading multiple images. |
-| `onError` | `(error: Error, url: string) => void` | `undefined` | The callback function to be called when the image fails to download. Only available when downloading multiple images. |
-| `signal` | `AbortSignal` | `undefined` | The signal to abort the request. |
-| `step` | `number` | 5 | The number of requests to make at the same time when downloading multiple images. |
-| `timeout` | `number` | `undefined` | Set timeout for each request in milliseconds.
+##### `directory`
+
+Type: `string`<br>
+Default: `process.cwd()`
+
+The output directory.
+
+##### `extension`
+
+Type: `string`<br>
+Default: `'jpg'`
+
+The file extension. If not specified, the original extension will be used. If the original extension is not available, 'jpg' will be used.
+
+##### `headers`
+
+Type: `Record<string, string | string[] | undefined>`<br>
+Default: `undefined`
+
+The headers to send with the request.
+
+##### `interval`
+
+Type: `number`<br>
+Default: `100`
+
+The interval between each batch of requests in milliseconds when downloading multiple images.
+
+##### `name`
+
+Type: `string`<br>
+Default: `'image'`
+
+The filename. If not specified, the original filename will be used. If the original filename is not available, 'image' will be used. <br>When downloading multiple images, `-index` will be appended to the end of the name (suffix). `index` will start from 1. For example: 'image-1'
+
+##### `maxRetry`
+
+Type: `number`<br>
+Default: `2`
+
+Set the maximum number of times to retry the request if it fails.
+
+##### `onSuccess`
+
+Type: `(image: Image) => void`<br>
+Default: `undefined`
+
+The callback function to be called when the image is successfully downloaded. Only available when downloading multiple images.
+
+##### `onError`
+
+Type: `(error: Error, url: string) => void`<br>
+Default: `undefined`
+
+The callback function to be called when the image fails to download. Only available when downloading multiple images.
+
+##### `signal`
+
+Type: `AbortSignal`<br>
+Default: `undefined`
+
+The signal to abort the request.
+
+##### `step`
+
+Type: `number`<br>
+Default: `5`
+
+The number of requests to make at the same time when downloading multiple images.
+
+##### `timeout`
+
+Type: `number`<br>
+Default: `undefined`
+
+Set timeout for each request in milliseconds.
 
 ## Comparison
 
-| Features | **img-dl** | [image-downloader][p1] |
-| --- | :---: | :---: |
-| Download single image | ✅ | ✅ |
-| Download multiple images | ✅ | ❌ |
-| CLI | ✅ | ❌ |
-| Increment download | ✅ | ❌ |
-| Custom filename | ✅ | ✅ |
-| Custom extension | ✅ | ❌ |
-| Request timeout | ✅ | ✅ |
-| Retry failed request | ✅ | ❌ |
-| Abort request | ✅ | ❌ |
+| Features                 | **img-dl** | [image-downloader][p1] |
+| ------------------------ | :--------: | :--------------------: |
+| Download single image    |     ✅     |           ✅           |
+| Download multiple images |     ✅     |           ❌           |
+| CLI                      |     ✅     |           ❌           |
+| Increment download       |     ✅     |           ❌           |
+| Custom filename          |     ✅     |           ✅           |
+| Custom extension         |     ✅     |           ❌           |
+| Request timeout          |     ✅     |           ✅           |
+| Retry failed request     |     ✅     |           ❌           |
+| Abort request            |     ✅     |           ❌           |
 
 <!-- Project links -->
+
 [p1]: https://www.npmjs.com/package/image-downloader
 
 ## Support This Project

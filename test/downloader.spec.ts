@@ -38,7 +38,9 @@ describe('`parseImageParams()`', () => {
 
   describe('with `directory` argument', () => {
     test('empty string', () => {
-      expect(parseImageParams(urlTest, { directory: '' })).toEqual(defaultExpected);
+      expect(parseImageParams(urlTest, { directory: '' })).toEqual(
+        defaultExpected,
+      );
     });
 
     test('valid directory', () => {
@@ -48,8 +50,10 @@ describe('`parseImageParams()`', () => {
         path: `${defaultExpected.directory}/test/${defaultExpected.name}.${defaultExpected.extension}`,
       });
 
-      expect(parseImageParams(urlTest, { directory: '.' }))
-        .toEqual({ ...defaultExpected, directory: '.' });
+      expect(parseImageParams(urlTest, { directory: '.' })).toEqual({
+        ...defaultExpected,
+        directory: '.',
+      });
 
       expect(parseImageParams(urlTest, { directory: './test' })).toEqual({
         ...defaultExpected,
@@ -63,11 +67,13 @@ describe('`parseImageParams()`', () => {
         path: `${defaultExpected.directory}/${defaultExpected.name}.${defaultExpected.extension}`,
       });
 
-      expect(parseImageParams(urlTest, { directory: 'test/../test2' })).toEqual({
-        ...defaultExpected,
-        directory: 'test2',
-        path: `${defaultExpected.directory}/test2/${defaultExpected.name}.${defaultExpected.extension}`,
-      });
+      expect(parseImageParams(urlTest, { directory: 'test/../test2' })).toEqual(
+        {
+          ...defaultExpected,
+          directory: 'test2',
+          path: `${defaultExpected.directory}/test2/${defaultExpected.name}.${defaultExpected.extension}`,
+        },
+      );
 
       expect(parseImageParams(urlTest, { directory: 'test/test' })).toEqual({
         ...defaultExpected,
@@ -89,12 +95,24 @@ describe('`parseImageParams()`', () => {
     });
 
     test('invalid: contain filename', () => {
-      expect(() => parseImageParams(urlTest, { directory: 'test/image.jpg' })).toThrow(ArgumentError);
-      expect(() => parseImageParams(urlTest, { directory: './test/image.jpg' })).toThrow(ArgumentError);
-      expect(() => parseImageParams(urlTest, { directory: './test/image.jpg/' })).toThrow(ArgumentError);
-      expect(() => parseImageParams(urlTest, { directory: 'image.jpg' })).toThrow(ArgumentError);
-      expect(() => parseImageParams(urlTest, { directory: './image.jpg' })).toThrow(ArgumentError);
-      expect(() => parseImageParams(urlTest, { directory: './image.jpg' })).toThrow(ArgumentError);
+      expect(() =>
+        parseImageParams(urlTest, { directory: 'test/image.jpg' }),
+      ).toThrow(ArgumentError);
+      expect(() =>
+        parseImageParams(urlTest, { directory: './test/image.jpg' }),
+      ).toThrow(ArgumentError);
+      expect(() =>
+        parseImageParams(urlTest, { directory: './test/image.jpg/' }),
+      ).toThrow(ArgumentError);
+      expect(() =>
+        parseImageParams(urlTest, { directory: 'image.jpg' }),
+      ).toThrow(ArgumentError);
+      expect(() =>
+        parseImageParams(urlTest, { directory: './image.jpg' }),
+      ).toThrow(ArgumentError);
+      expect(() =>
+        parseImageParams(urlTest, { directory: './image.jpg' }),
+      ).toThrow(ArgumentError);
     });
   });
 
@@ -124,8 +142,10 @@ describe('`parseImageParams()`', () => {
     });
 
     test('function returns empty string', () => {
-      expect(parseImageParams(urlTest, { name: () => '' }))
-        .toEqual({ ...defaultExpected, name: DEFAULT_NAME });
+      expect(parseImageParams(urlTest, { name: () => '' })).toEqual({
+        ...defaultExpected,
+        name: DEFAULT_NAME,
+      });
     });
 
     test('function returns string', () => {
@@ -137,13 +157,19 @@ describe('`parseImageParams()`', () => {
     });
 
     test('function with original name', () => {
-      expect(parseImageParams(urlTest, { name: (ori) => `test-${ori}` })).toEqual({
+      expect(
+        parseImageParams(urlTest, { name: (ori) => `test-${ori}` }),
+      ).toEqual({
         ...defaultExpected,
         name: 'test-undefined',
         path: `${defaultExpected.directory}/test-undefined.${defaultExpected.extension}`,
       });
 
-      expect(parseImageParams('https://picsum.photos/200/300.webp', { name: (ori) => `test-${ori}` })).toEqual({
+      expect(
+        parseImageParams('https://picsum.photos/200/300.webp', {
+          name: (ori) => `test-${ori}`,
+        }),
+      ).toEqual({
         ...defaultExpected,
         url: 'https://picsum.photos/200/300.webp',
         name: 'test-300',
@@ -155,29 +181,57 @@ describe('`parseImageParams()`', () => {
     });
 
     test('invalid: contain prohibited characters', () => {
-      expect(() => parseImageParams(urlTest, { name: 'test<image' })).toThrow(ArgumentError);
-      expect(() => parseImageParams(urlTest, { name: 'test>image' })).toThrow(ArgumentError);
-      expect(() => parseImageParams(urlTest, { name: 'test:image' })).toThrow(ArgumentError);
-      expect(() => parseImageParams(urlTest, { name: 'test"image' })).toThrow(ArgumentError);
-      expect(() => parseImageParams(urlTest, { name: 'test/image' })).toThrow(ArgumentError);
-      expect(() => parseImageParams(urlTest, { name: 'test\\image' })).toThrow(ArgumentError);
-      expect(() => parseImageParams(urlTest, { name: 'test|image' })).toThrow(ArgumentError);
-      expect(() => parseImageParams(urlTest, { name: 'test?image' })).toThrow(ArgumentError);
-      expect(() => parseImageParams(urlTest, { name: 'test*image' })).toThrow(ArgumentError);
-      expect(() => parseImageParams(urlTest, { name: 'test  ' })).toThrow(ArgumentError);
+      expect(() => parseImageParams(urlTest, { name: 'test<image' })).toThrow(
+        ArgumentError,
+      );
+      expect(() => parseImageParams(urlTest, { name: 'test>image' })).toThrow(
+        ArgumentError,
+      );
+      expect(() => parseImageParams(urlTest, { name: 'test:image' })).toThrow(
+        ArgumentError,
+      );
+      expect(() => parseImageParams(urlTest, { name: 'test"image' })).toThrow(
+        ArgumentError,
+      );
+      expect(() => parseImageParams(urlTest, { name: 'test/image' })).toThrow(
+        ArgumentError,
+      );
+      expect(() => parseImageParams(urlTest, { name: 'test\\image' })).toThrow(
+        ArgumentError,
+      );
+      expect(() => parseImageParams(urlTest, { name: 'test|image' })).toThrow(
+        ArgumentError,
+      );
+      expect(() => parseImageParams(urlTest, { name: 'test?image' })).toThrow(
+        ArgumentError,
+      );
+      expect(() => parseImageParams(urlTest, { name: 'test*image' })).toThrow(
+        ArgumentError,
+      );
+      expect(() => parseImageParams(urlTest, { name: 'test  ' })).toThrow(
+        ArgumentError,
+      );
       // Other tests is covered by `sanitize-filename` in https://github.com/parshap/node-sanitize-filename/blob/master/test.js
     });
 
     test('invalid: contains image extension', () => {
-      expect(() => parseImageParams(urlTest, { name: 'test.jpg' })).toThrow(ArgumentError);
-      expect(() => parseImageParams(urlTest, { name: 'test.png' })).toThrow(ArgumentError);
-      expect(() => parseImageParams(urlTest, { name: 'test.webp' })).toThrow(ArgumentError);
+      expect(() => parseImageParams(urlTest, { name: 'test.jpg' })).toThrow(
+        ArgumentError,
+      );
+      expect(() => parseImageParams(urlTest, { name: 'test.png' })).toThrow(
+        ArgumentError,
+      );
+      expect(() => parseImageParams(urlTest, { name: 'test.webp' })).toThrow(
+        ArgumentError,
+      );
     });
   });
 
   describe('with `extension` argument', () => {
     test('empty string', () => {
-      expect(parseImageParams(urlTest, { extension: '' })).toEqual(defaultExpected);
+      expect(parseImageParams(urlTest, { extension: '' })).toEqual(
+        defaultExpected,
+      );
     });
 
     test('valid image extension', () => {
@@ -201,22 +255,36 @@ describe('`parseImageParams()`', () => {
     });
 
     test('invalid: contain dot', () => {
-      expect(() => parseImageParams(urlTest, { extension: '.jpg' })).toThrow(ArgumentError);
-      expect(() => parseImageParams(urlTest, { extension: '.png' })).toThrow(ArgumentError);
-      expect(() => parseImageParams(urlTest, { extension: 'test.test' })).toThrow(ArgumentError);
-      expect(() => parseImageParams(urlTest, { extension: 'test.test.test' })).toThrow(ArgumentError);
+      expect(() => parseImageParams(urlTest, { extension: '.jpg' })).toThrow(
+        ArgumentError,
+      );
+      expect(() => parseImageParams(urlTest, { extension: '.png' })).toThrow(
+        ArgumentError,
+      );
+      expect(() =>
+        parseImageParams(urlTest, { extension: 'test.test' }),
+      ).toThrow(ArgumentError);
+      expect(() =>
+        parseImageParams(urlTest, { extension: 'test.test.test' }),
+      ).toThrow(ArgumentError);
     });
 
     test('invalid: not an image extension', () => {
-      expect(() => parseImageParams(urlTest, { extension: 'mp4' })).toThrow(ArgumentError);
-      expect(() => parseImageParams(urlTest, { extension: 'txt' })).toThrow(ArgumentError);
-      expect(() => parseImageParams(urlTest, { extension: 'unknown' })).toThrow(ArgumentError);
+      expect(() => parseImageParams(urlTest, { extension: 'mp4' })).toThrow(
+        ArgumentError,
+      );
+      expect(() => parseImageParams(urlTest, { extension: 'txt' })).toThrow(
+        ArgumentError,
+      );
+      expect(() => parseImageParams(urlTest, { extension: 'unknown' })).toThrow(
+        ArgumentError,
+      );
     });
   });
 });
 
 describe('`download()`', () => {
-  test('Only `url`', async () => {
+  test('Only `url`', { timeout: 15000 }, async () => {
     const url = 'https://picsum.photos/200/300.webp';
     const expectedFilePath = `${process.cwd()}/300.webp`;
 
@@ -225,7 +293,7 @@ describe('`download()`', () => {
 
     // Cleanup
     fs.unlinkSync(expectedFilePath);
-  }, { timeout: 15000 });
+  });
 
   test('should throw an error if the directory cannot be created', async () => {
     const url = 'https://picsum.photos/200/300';
