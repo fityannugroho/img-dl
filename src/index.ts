@@ -1,5 +1,6 @@
-import PQueue, { AbortError } from 'p-queue';
+import PQueue from 'p-queue';
 import { setMaxListeners } from 'node:events';
+import { CancelError } from 'got';
 import { DEFAULT_INTERVAL, DEFAULT_NAME, DEFAULT_STEP } from './constanta.js';
 import { DownloadOptions, download } from './downloader.js';
 
@@ -128,7 +129,7 @@ async function imgdl(url: string | string[], options?: Options): Promise<Image |
               images.push(image);
             }
           }).catch((error) => {
-            if (!(error instanceof AbortError)) {
+            if (!(error instanceof CancelError)) {
               reject(error);
             }
           });
