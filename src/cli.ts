@@ -10,7 +10,8 @@ import DirectoryError from './errors/DirectoryError.js';
 import imgdl, { Options } from './index.js';
 
 const cli = meow(
-  `USAGE
+  `
+  USAGE
     $ imgdl <url> ... [OPTIONS]
 
   PARAMETERS
@@ -89,6 +90,10 @@ const cli = meow(
         shortFlag: 't',
         type: 'number',
       },
+      version: {
+        shortFlag: 'v',
+        type: 'boolean',
+      },
     },
   },
 );
@@ -101,6 +106,10 @@ const dimLog = chalk.dim;
 async function main() {
   let urls = cli.input;
   const { flags } = cli;
+
+  if (flags.version) {
+    cli.showVersion();
+  }
 
   if (!urls.length) {
     cli.showHelp();

@@ -161,4 +161,18 @@ describe('cli', () => {
       });
     });
   });
+
+  describe('Show version', () => {
+    test('should show the version', async () => {
+      const { stdout } = await $`node dist/cli.js --version`;
+
+      expect(stdout).toMatch(/\d+\.\d+\.\d+/);
+    });
+
+    test('should show the version with short flag', async () => {
+      const { stdout } = await $`node dist/cli.js -v`;
+
+      expect(stdout).toMatch(/\d+\.\d+\.\d+/);
+    });
+  });
 });
