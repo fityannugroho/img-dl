@@ -1,9 +1,7 @@
 import { $ } from 'execa';
 import fs from 'node:fs';
 import path from 'node:path';
-import {
-  beforeAll, describe, expect, test,
-} from 'vitest';
+import { beforeAll, describe, expect, test } from 'vitest';
 
 describe('cli', () => {
   const validTestUrl = 'https://picsum.photos/200/300.webp';
@@ -12,7 +10,7 @@ describe('cli', () => {
     await $`npm run build`;
   });
 
-  test('Only URL', async () => {
+  test('Only URL', { timeout: 15000 }, async () => {
     const expectedFilePath = `${process.cwd()}/300.webp`;
     const { stdout } = await $`node dist/cli.js ${validTestUrl}`;
 
@@ -21,9 +19,9 @@ describe('cli', () => {
 
     // Cleanup
     fs.unlinkSync(expectedFilePath);
-  }, { timeout: 15000 });
+  });
 
-  test('with `--dir` argument', async () => {
+  test('with `--dir` argument', { timeout: 15000 }, async () => {
     const expectedFilePath = `${process.cwd()}/images/300.webp`;
     const { stdout } = await $`node dist/cli.js ${validTestUrl} --dir=images`;
 
@@ -33,20 +31,21 @@ describe('cli', () => {
     // Cleanup
     fs.unlinkSync(expectedFilePath);
     fs.rmdirSync(path.dirname(expectedFilePath));
-  }, { timeout: 15000 });
+  });
 
-  test('with `--name` argument', async () => {
+  test('with `--name` argument', { timeout: 15000 }, async () => {
     const expectedFilePath = `${process.cwd()}/custom-name.webp`;
-    const { stdout } = await $`node dist/cli.js ${validTestUrl} --name=custom-name`;
+    const { stdout } =
+      await $`node dist/cli.js ${validTestUrl} --name=custom-name`;
 
     expect(stdout).toMatch('Done!');
     expect(fs.existsSync(expectedFilePath)).toBe(true);
 
     // Cleanup
     fs.unlinkSync(expectedFilePath);
-  }, { timeout: 15000 });
+  });
 
-  test('with `--silent` argument', async () => {
+  test('with `--silent` argument', { timeout: 15000 }, async () => {
     const expectedFilePath = `${process.cwd()}/300.webp`;
     const { stdout } = await $`node dist/cli.js ${validTestUrl} --silent`;
 
@@ -55,7 +54,7 @@ describe('cli', () => {
 
     // Cleanup
     fs.unlinkSync(expectedFilePath);
-  }, { timeout: 15000 });
+  });
 
   test('should throw an error if arguments is invalid', async () => {
     await expect(
@@ -74,7 +73,9 @@ describe('cli', () => {
   });
 
   test('should throw an error if the response is unsuccessful', async () => {
-    await expect($`node dist/cli.js https://picsum.photos/xxx`).rejects.toThrow();
+    await expect(
+      $`node dist/cli.js https://picsum.photos/xxx`,
+    ).rejects.toThrow();
   });
 
   test('should throw an error if the response is not an image', async () => {
@@ -82,10 +83,16 @@ describe('cli', () => {
   });
 
   describe('Multiple URLs', () => {
-    const validTestUrls = ['https://picsum.photos/200/300.webp', 'https://picsum.photos/200/300'];
-    const expectedFilePaths = [`${process.cwd()}/300-1.webp`, `${process.cwd()}/image-2.jpg`];
+    const validTestUrls = [
+      'https://picsum.photos/200/300.webp',
+      'https://picsum.photos/200/300',
+    ];
+    const expectedFilePaths = [
+      `${process.cwd()}/300-1.webp`,
+      `${process.cwd()}/image-2.jpg`,
+    ];
 
-    test('Only URLs', async () => {
+    test('Only URLs', { timeout: 15000 }, async () => {
       const { stdout } = await $`node dist/cli.js ${validTestUrls}`;
 
       expect(stdout).toMatch('Done!');
@@ -95,7 +102,7 @@ describe('cli', () => {
         // Cleanup
         fs.unlinkSync(filepath);
       });
-    }, { timeout: 15000 });
+    });
 
     test('should throw an error if arguments is invalid', async () => {
       await expect(
@@ -137,12 +144,13 @@ describe('cli', () => {
       ).rejects.toThrow();
     });
 
-    test('Valid', async () => {
+    test('Valid', { timeout: 15000 }, async () => {
       const expectedFilePaths = [
         `${process.cwd()}/300-1.webp`,
         `${process.cwd()}/301-2.webp`,
       ];
-      const { stdout } = await $`node dist/cli.js ${testUrl} --increment --start=300 --end=301`;
+      const { stdout } =
+        await $`node dist/cli.js ${testUrl} --increment --start=300 --end=301`;
 
       expect(stdout).toMatch('Done!');
       expectedFilePaths.forEach((filepath) => {
@@ -151,6 +159,6 @@ describe('cli', () => {
         // Cleanup
         fs.unlinkSync(filepath);
       });
-    }, { timeout: 15000 });
+    });
   });
 });
