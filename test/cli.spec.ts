@@ -10,7 +10,7 @@ describe('cli', () => {
     await $`npm run build`;
   });
 
-  test('Only URL', { timeout: 15000 }, async () => {
+  test('Only URL', async () => {
     const expectedFilePath = `${process.cwd()}/300.webp`;
     const { stdout } = await $`node dist/cli.js ${validTestUrl}`;
 
@@ -21,7 +21,7 @@ describe('cli', () => {
     fs.unlinkSync(expectedFilePath);
   });
 
-  test('with `--dir` argument', { timeout: 15000 }, async () => {
+  test('with `--dir` argument', async () => {
     const expectedFilePath = `${process.cwd()}/images/300.webp`;
     const { stdout } = await $`node dist/cli.js ${validTestUrl} --dir=images`;
 
@@ -33,7 +33,7 @@ describe('cli', () => {
     fs.rmdirSync(path.dirname(expectedFilePath));
   });
 
-  test('with `--name` argument', { timeout: 15000 }, async () => {
+  test('with `--name` argument', async () => {
     const expectedFilePath = `${process.cwd()}/custom-name.webp`;
     const { stdout } =
       await $`node dist/cli.js ${validTestUrl} --name=custom-name`;
@@ -45,7 +45,7 @@ describe('cli', () => {
     fs.unlinkSync(expectedFilePath);
   });
 
-  test('with `--silent` argument', { timeout: 15000 }, async () => {
+  test('with `--silent` argument', async () => {
     const expectedFilePath = `${process.cwd()}/300.webp`;
     const { stdout } = await $`node dist/cli.js ${validTestUrl} --silent`;
 
@@ -88,11 +88,11 @@ describe('cli', () => {
       'https://picsum.photos/200/300',
     ];
     const expectedFilePaths = [
-      `${process.cwd()}/300-1.webp`,
-      `${process.cwd()}/image-2.jpg`,
+      `${process.cwd()}/300.webp`,
+      `${process.cwd()}/image.jpg`,
     ];
 
-    test('Only URLs', { timeout: 15000 }, async () => {
+    test('Only URLs', async () => {
       const { stdout } = await $`node dist/cli.js ${validTestUrls}`;
 
       expect(stdout).toMatch('Done!');
@@ -144,10 +144,10 @@ describe('cli', () => {
       ).rejects.toThrow();
     });
 
-    test('Valid', { timeout: 15000 }, async () => {
+    test('Valid', async () => {
       const expectedFilePaths = [
-        `${process.cwd()}/300-1.webp`,
-        `${process.cwd()}/301-2.webp`,
+        `${process.cwd()}/300.webp`,
+        `${process.cwd()}/301.webp`,
       ];
       const { stdout } =
         await $`node dist/cli.js ${testUrl} --increment --start=300 --end=301`;

@@ -1,7 +1,7 @@
 import PQueue from 'p-queue';
 import { setMaxListeners } from 'node:events';
 import { CancelError } from 'got';
-import { DEFAULT_INTERVAL, DEFAULT_NAME, DEFAULT_STEP } from './constanta.js';
+import { DEFAULT_INTERVAL, DEFAULT_STEP } from './constanta.js';
 import { DownloadOptions, download } from './downloader.js';
 
 export type Image = {
@@ -35,22 +35,7 @@ export type Image = {
   path: string;
 };
 
-export type Options = Omit<DownloadOptions, 'name'> & {
-  /**
-   * The name of the image file.
-   *
-   * You also can provide a function that returns the name.
-   * The function will be called with the original name, if it exists in the URL.
-   *
-   * The default value will be used if this value (or the function) returns an empty string.
-   *
-   * The default value will be the **original name** if it exists in the URL.
-   * Otherwise, it will be **'image'**.
-   *
-   * When downloading multiple images, `-index` will be appended to the end of the name (suffix).
-   * `index` will start from 1.
-   */
-  name?: string;
+export type Options = DownloadOptions & {
   /**
    * Do something when the image is successfully downloaded.
    * For example, counting the number of successful downloads.
@@ -113,15 +98,13 @@ async function imgdl(
     return new Promise<Image[]>((resolve, reject) => {
       const images: Image[] = [];
 
-      url.forEach((u, i) => {
+      url.forEach((u) => {
         queue
           .add(
             async ({ signal }) => {
               try {
                 return await download(u, {
                   ...options,
-                  name: (ori) =>
-                    `${options?.name ?? ori ?? DEFAULT_NAME}-${i + 1}`,
                   signal,
                 });
               } catch (error) {

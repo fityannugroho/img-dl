@@ -1,10 +1,10 @@
 import fs from 'node:fs';
 import { describe, expect, test, vi } from 'vitest';
-import { DEFAULT_NAME } from '~/constanta.js';
+import { DEFAULT_EXTENSION, DEFAULT_NAME } from '~/constanta.js';
 import imgdl from '~/index.js';
 
 describe('`imgdl()`', () => {
-  test('single', { timeout: 15000 }, async () => {
+  test('single', async () => {
     const url = 'https://picsum.photos/200/300.webp';
     const expectedFilePath = `${process.cwd()}/300.webp`;
 
@@ -20,9 +20,9 @@ describe('`imgdl()`', () => {
       'https://picsum.photos/200/300.webp',
       'https://picsum.photos/200/300',
     ];
-    const expectedNames = ['300-1.webp', `${DEFAULT_NAME}-2.jpg`];
+    const expectedNames = ['300.webp', `${DEFAULT_NAME}.${DEFAULT_EXTENSION}`];
 
-    test('only array of `url`s', { timeout: 15000 }, async () => {
+    test('only array of `url`s', async () => {
       const expectedFilePaths = expectedNames.map(
         (n) => `${process.cwd()}/${n}`,
       );
@@ -37,7 +37,7 @@ describe('`imgdl()`', () => {
       });
     });
 
-    test('with `directory` argument', { timeout: 15000 }, async () => {
+    test('with `directory` argument', async () => {
       const directory = 'test/tmp';
       const expectedFilePaths = expectedNames.map(
         (n) => `${process.cwd()}/${directory}/${n}`,
@@ -53,10 +53,11 @@ describe('`imgdl()`', () => {
       });
     });
 
-    test('with `name` argument', { timeout: 15000 }, async () => {
-      const expectedFilePaths = ['asset-1.webp', 'asset-2.jpg'].map(
-        (n) => `${process.cwd()}/${n}`,
-      );
+    test('with `name` argument', async () => {
+      const expectedFilePaths = [
+        'asset.webp',
+        `asset.${DEFAULT_EXTENSION}`,
+      ].map((n) => `${process.cwd()}/${n}`);
       const images = await imgdl(testUrls, { name: 'asset' });
 
       expect(images.map((img) => img.path).sort()).toEqual(
@@ -68,7 +69,7 @@ describe('`imgdl()`', () => {
       });
     });
 
-    test('with `onSuccess` argument', { timeout: 15000 }, async () => {
+    test('with `onSuccess` argument', async () => {
       const expectedFilePaths = expectedNames.map(
         (n) => `${process.cwd()}/${n}`,
       );

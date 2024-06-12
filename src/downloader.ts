@@ -26,15 +26,13 @@ export type DownloadOptions = {
   /**
    * The name of the image file.
    *
-   * You also can provide a function that returns the name.
-   * The function will be called with the original name, if it exists in the URL.
+   * If not provided, the default value will be the **original name** if it exists in the URL.
    *
-   * The default value will be used if this value (or the function) returns an empty string.
-   *
-   * The default value will be the **original name** if it exists in the URL.
    * Otherwise, it will be **'image'**.
+   *
+   * If a name with same extension already exists, ` (1)`, ` (2)`, etc. will be added to the end of the name.
    */
-  name?: string | ((original?: string) => string);
+  name?: string;
   /**
    * Set the maximum number of times to retry the request if it fails.
    *
@@ -87,9 +85,7 @@ export function parseImageParams(url: string, options?: DownloadOptions) {
   }
 
   // Set name
-  if (typeof options?.name === 'function') {
-    img.name = options.name(img.originalName);
-  } else if (options?.name) {
+  if (options?.name) {
     img.name = options.name;
   }
 
@@ -121,6 +117,15 @@ export function parseImageParams(url: string, options?: DownloadOptions) {
     img.extension = lowerImgExts.includes(originalExt.toLowerCase())
       ? originalExt
       : DEFAULT_EXTENSION;
+  }
+
+  // Make sure the path is unique, if not, add a number to the end of the name.
+  while (
+    fs.existsSync(path.resolve(img.directory, `${img.name}.${img.extension}`))
+  ) {
+    const match = img.name.match(/ \((\d+)\)$/);
+    const num = match ? parseInt(match[1], 10) + 1 : 1;
+    img.name = img.name.replace(/ \(\d+\)$/, '') + ` (${num})`;
   }
 
   // Set path

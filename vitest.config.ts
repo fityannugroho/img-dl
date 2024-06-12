@@ -10,5 +10,6 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
     },
+    testTimeout: 30000,
   },
 });
