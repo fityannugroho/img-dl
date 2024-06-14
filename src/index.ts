@@ -2,7 +2,13 @@ import PQueue from 'p-queue';
 import { setMaxListeners } from 'node:events';
 import { CancelError } from 'got';
 import { DEFAULT_INTERVAL, DEFAULT_STEP } from './constanta.js';
-import { DownloadOptions, download } from './downloader.js';
+import {
+  DownloadOptions,
+  ImageOptions,
+  download,
+  parseImageParams,
+} from './downloader.js';
+import path from 'node:path';
 
 export type Image = {
   /**
@@ -35,7 +41,7 @@ export type Image = {
   path: string;
 };
 
-export type Options = DownloadOptions & {
+export type Options = (ImageOptions & DownloadOptions) & {
   /**
    * Do something when the image is successfully downloaded.
    * For example, counting the number of successful downloads.
@@ -97,13 +103,29 @@ async function imgdl(
 
     return new Promise<Image[]>((resolve, reject) => {
       const images: Image[] = [];
+      const countNames = new Map<string, number>();
 
       url.forEach((u) => {
+        const img = parseImageParams(u, options);
+
+        // Make sure the name is unique
+        const nameKey = `${img.name}.${img.extension}`;
+        const count = countNames.get(nameKey);
+        if (count) {
+          img.name = `${img.name} (${count})`;
+          img.path = path.resolve(
+            img.directory,
+            `${img.name}.${img.extension}`,
+          );
+        }
+        countNames.set(nameKey, (count || 0) + 1);
+
+        // Add the download task to queue
         queue
           .add(
             async ({ signal }) => {
               try {
-                return await download(u, {
+                return await download(img, {
                   ...options,
                   signal,
                 });
@@ -130,6 +152,7 @@ async function imgdl(
           });
       });
 
+      // Resolve/reject when all task is finished
       queue
         .onIdle()
         .then(() => {
@@ -141,7 +164,7 @@ async function imgdl(
     });
   }
 
-  return download(url, {
+  return download(parseImageParams(url, options), {
     ...options,
     signal: options?.signal,
   });

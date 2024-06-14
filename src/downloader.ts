@@ -12,17 +12,13 @@ import ArgumentError from './errors/ArgumentError.js';
 import DirectoryError from './errors/DirectoryError.js';
 import { Image } from './index.js';
 
-export type DownloadOptions = {
+export type ImageOptions = {
   /**
    * The directory to save the image to.
    *
    * If not provided, the current working directory will be used.
    */
   directory?: string;
-  /**
-   * The headers to send with the request.
-   */
-  headers?: Record<string, string | string[] | undefined>;
   /**
    * The name of the image file.
    *
@@ -34,12 +30,6 @@ export type DownloadOptions = {
    */
   name?: string;
   /**
-   * Set the maximum number of times to retry the request if it fails.
-   *
-   * @default 2
-   */
-  maxRetry?: number;
-  /**
    * The extension of the image.
    *
    * If not provided, the extension of the URL will be used.
@@ -47,6 +37,19 @@ export type DownloadOptions = {
    * If the URL doesn't have an extension, `jpg` will be used.
    */
   extension?: string;
+};
+
+export type DownloadOptions = {
+  /**
+   * The headers to send with the request.
+   */
+  headers?: Record<string, string | string[] | undefined>;
+  /**
+   * Set the maximum number of times to retry the request if it fails.
+   *
+   * @default 2
+   */
+  maxRetry?: number;
   /**
    * Set timeout for each request in milliseconds.
    */
@@ -58,11 +61,15 @@ export type DownloadOptions = {
 };
 
 /**
- * Set the options with the default values if they are not provided.
+ * Parses and validates the image parameters.
+ *
+ * If image options are not provided, the default values will be used.
+ *
+ * See {@link ImageOptions} for more information.
  *
  * @throws {ArgumentError} If there is an invalid value.
  */
-export function parseImageParams(url: string, options?: DownloadOptions) {
+export function parseImageParams(url: string, options?: ImageOptions) {
   const lowerImgExts = [...imageExtensions].map((ext) => ext.toLowerCase());
   const originalExt = path.extname(url).replace('.', '');
   const img: Image = {
@@ -135,16 +142,14 @@ export function parseImageParams(url: string, options?: DownloadOptions) {
 }
 
 /**
- * Downloads an image from a URL.
- * @param url The URL of the image to download.
- * @param options The options to use.
+ * Downloads an image.
+ * @param img The validated image parameters. See {@link parseImageParams}.
+ * @param options The download options.
  * @returns The file path.
  * @throws {DirectoryError} If the directory cannot be created.
  * @throws {Error} If there are any other errors.
  */
-export async function download(url: string, options: DownloadOptions = {}) {
-  const img = parseImageParams(url, options);
-
+export async function download(img: Image, options: DownloadOptions = {}) {
   // Create the directory if it doesn't exist.
   if (!fs.existsSync(img.directory)) {
     try {
