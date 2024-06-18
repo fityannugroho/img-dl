@@ -10,7 +10,7 @@ import {
 import { download, parseImageParams } from '~/downloader.js';
 import ArgumentError from '~/errors/ArgumentError.js';
 import DirectoryError from '~/errors/DirectoryError.js';
-import { BASE_URL } from './constanta.js';
+import { BASE_URL } from './fixture/constanta.js';
 import path from 'node:path';
 
 describe('`parseImageParams()`', () => {

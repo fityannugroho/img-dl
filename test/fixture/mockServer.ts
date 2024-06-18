@@ -2,7 +2,6 @@ import nock from 'nock';
 import path from 'path';
 import fs from 'fs';
 import { BASE_URL } from './constanta.js';
-import { fileURLToPath } from 'node:url';
 
 const DEFAULT_IMAGE_NAME = '200x300';
 const DEFAULT_IMAGE_EXTENSION = 'jpg';
@@ -36,8 +35,7 @@ export function startMockServer() {
         }
       }
 
-      const dirname = path.dirname(fileURLToPath(import.meta.url));
-      const imagePath = path.resolve(dirname, 'fixture', imageName);
+      const imagePath = path.resolve(__dirname, imageName);
 
       // Return 404 if the image path doesn't exist.
       if (!fs.existsSync(imagePath)) {

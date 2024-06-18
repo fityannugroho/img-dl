@@ -14,8 +14,8 @@ import {
   imageExtensions,
 } from '~/constanta.js';
 import imgdl from '~/index.js';
-import { BASE_URL } from './constanta.js';
-import { startMockServer, stopMockServer } from './mock.js';
+import { BASE_URL } from './fixture/constanta.js';
+import { startMockServer, stopMockServer } from './fixture/mockServer.js';
 
 describe('`imgdl()`', () => {
   beforeAll(() => {
