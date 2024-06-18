@@ -14,16 +14,12 @@ import {
   imageExtensions,
 } from '~/constanta.js';
 import imgdl from '~/index.js';
-import { buildServer } from './server/index.js';
-import { BASE_URL, env } from './server/env.js';
-import { FastifyInstance } from 'fastify';
+import { BASE_URL } from './constanta.js';
+import { startMockServer, stopMockServer } from './mock.js';
 
 describe('`imgdl()`', () => {
-  let server: FastifyInstance;
-
-  beforeAll(async () => {
-    server = buildServer();
-    await server.listen({ host: env.HOST, port: env.PORT });
+  beforeAll(() => {
+    startMockServer();
   });
 
   afterEach(() => {
@@ -36,9 +32,8 @@ describe('`imgdl()`', () => {
     });
   });
 
-  // Ensure server is running
-  test('server is ready', async () => {
-    expect(server).toBeDefined();
+  afterAll(() => {
+    stopMockServer();
   });
 
   test('single image download', async () => {
@@ -160,9 +155,5 @@ describe('`imgdl()`', () => {
       expect(errorCount).toEqual(2);
       expect(images).toEqual([]);
     });
-  });
-
-  afterAll(async () => {
-    await server.close();
   });
 });

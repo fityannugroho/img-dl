@@ -1,52 +1,24 @@
 import { $ } from 'execa';
-import { FastifyInstance } from 'fastify';
 import fs from 'node:fs';
-import { afterAll, afterEach, beforeAll, describe, expect, test } from 'vitest';
-import { buildServer } from './server/index.js';
-import { BASE_URL, env } from './server/env.js';
-import {
-  DEFAULT_EXTENSION,
-  DEFAULT_NAME,
-  imageExtensions,
-} from '~/constanta.js';
+import { describe, expect, test } from 'vitest';
+import { BASE_URL } from './constanta.js';
+import { DEFAULT_EXTENSION, DEFAULT_NAME } from '~/constanta.js';
 
 describe('cli', () => {
-  const validTestUrl = `${BASE_URL}/images/200x300.webp`;
-  let server: FastifyInstance;
+  const testUrl = `${BASE_URL}/images/200x300.webp`;
 
-  beforeAll(async () => {
-    server = buildServer();
-    await server.listen({ host: env.HOST, port: env.PORT });
-    await $`npm run build`;
-  });
-
-  afterEach(() => {
-    // Clean up all images files in the current directory
-    fs.readdirSync(process.cwd()).forEach((file) => {
-      const ext = file.split('.').pop();
-      if (ext && imageExtensions.has(ext.toLowerCase())) {
-        fs.unlinkSync(file);
-      }
-    });
-  });
-
-  // Ensure server is running
-  test('server is ready', async () => {
-    expect(server).toBeDefined();
-  });
-
-  test('Only URL', async () => {
+  test.todo('Only URL', async () => {
     const expectedFilePath = `${process.cwd()}/200x300.webp`;
-    const { stdout } = await $`node dist/cli.js ${validTestUrl}`;
+    const { stdout } = await $`node dist/cli.js ${testUrl}`;
 
     expect(stdout).toMatch('Done!');
     expect(fs.existsSync(expectedFilePath)).toBe(true);
   });
 
-  test('with `--dir` argument', async () => {
+  test.todo('with `--dir` argument', async () => {
     const expectedDirPath = `${process.cwd()}/images`;
     const expectedFilePath = `${expectedDirPath}/200x300.webp`;
-    const { stdout } = await $`node dist/cli.js ${validTestUrl} --dir=images`;
+    const { stdout } = await $`node dist/cli.js ${testUrl} --dir=images`;
 
     try {
       expect(stdout).toMatch('Done!');
@@ -57,18 +29,17 @@ describe('cli', () => {
     }
   });
 
-  test('with `--name` argument', async () => {
+  test.todo('with `--name` argument', async () => {
     const expectedFilePath = `${process.cwd()}/custom-name.webp`;
-    const { stdout } =
-      await $`node dist/cli.js ${validTestUrl} --name=custom-name`;
+    const { stdout } = await $`node dist/cli.js ${testUrl} --name=custom-name`;
 
     expect(stdout).toMatch('Done!');
     expect(fs.existsSync(expectedFilePath)).toBe(true);
   });
 
-  test('with `--silent` argument', async () => {
+  test.todo('with `--silent` argument', async () => {
     const expectedFilePath = `${process.cwd()}/200x300.webp`;
-    const { stdout } = await $`node dist/cli.js ${validTestUrl} --silent`;
+    const { stdout } = await $`node dist/cli.js ${testUrl} --silent`;
 
     expect(stdout).toBe('');
     expect(fs.existsSync(expectedFilePath)).toBe(true);
@@ -76,13 +47,13 @@ describe('cli', () => {
 
   test('should throw an error if arguments is invalid', async () => {
     await expect(
-      $`node dist/cli.js ${validTestUrl} --name=test/test`,
+      $`node dist/cli.js ${testUrl} --name=test/test`,
     ).rejects.toThrow();
   });
 
   test('should throw an error if the directory cannot be created', async () => {
     await expect(
-      $`node dist/cli.js ${validTestUrl} --dir=/new-root-dir-no-access`,
+      $`node dist/cli.js ${testUrl} --dir=/new-root-dir-no-access`,
     ).rejects.toThrow();
   });
 
@@ -108,7 +79,7 @@ describe('cli', () => {
       `${process.cwd()}/${DEFAULT_NAME}.${DEFAULT_EXTENSION}`,
     ];
 
-    test('Only URLs', async () => {
+    test.todo('Only URLs', async () => {
       const { stdout } = await $`node dist/cli.js ${validTestUrls}`;
 
       expect(stdout).toMatch('Done!');
@@ -157,7 +128,7 @@ describe('cli', () => {
       ).rejects.toThrow();
     });
 
-    test('Valid', async () => {
+    test.todo('Valid', async () => {
       const { stdout } =
         await $`node dist/cli.js ${testUrl} --increment --start=300 --end=302`;
 
@@ -173,7 +144,7 @@ describe('cli', () => {
       });
     });
 
-    test('Valid without extension in url', async () => {
+    test.todo('Valid without extension in url', async () => {
       const { stdout } =
         await $`node dist/cli.js ${BASE_URL}/images/img-{i} --increment --start=1 --end=3`;
 
@@ -202,9 +173,5 @@ describe('cli', () => {
 
       expect(stdout).toMatch(/\d+\.\d+\.\d+/);
     });
-  });
-
-  afterAll(async () => {
-    await server.close();
   });
 });

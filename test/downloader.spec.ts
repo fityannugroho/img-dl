@@ -1,6 +1,7 @@
 import { HTTPError, RequestError } from 'got';
+import nock from 'nock';
 import fs from 'node:fs';
-import { afterAll, afterEach, beforeAll, describe, expect, test } from 'vitest';
+import { afterAll, afterEach, describe, expect, test } from 'vitest';
 import {
   DEFAULT_EXTENSION,
   DEFAULT_NAME,
@@ -9,10 +10,8 @@ import {
 import { download, parseImageParams } from '~/downloader.js';
 import ArgumentError from '~/errors/ArgumentError.js';
 import DirectoryError from '~/errors/DirectoryError.js';
-import { BASE_URL, env } from './server/env.js';
-import { buildServer } from './server/index.js';
-import { IncomingMessage, get } from 'node:http';
-import { FastifyInstance } from 'fastify';
+import { BASE_URL } from './constanta.js';
+import path from 'node:path';
 
 describe('`parseImageParams()`', () => {
   const urlTest = `${BASE_URL}/images/200x300`;
@@ -285,13 +284,6 @@ describe('`parseImageParams()`', () => {
 });
 
 describe('`download()`', () => {
-  let server: FastifyInstance;
-
-  beforeAll(async () => {
-    server = buildServer();
-    await server.listen({ host: env.HOST, port: env.PORT });
-  });
-
   afterEach(() => {
     // Clean up all images files in the current directory
     fs.readdirSync(process.cwd()).forEach((file) => {
@@ -300,28 +292,27 @@ describe('`download()`', () => {
         fs.unlinkSync(file);
       }
     });
+
+    // Restore the nock
+    nock.restore();
   });
 
-  // Ensure server is running
-  test('server is ready', async () => {
-    expect(server).toBeDefined();
-
-    const res: IncomingMessage = await new Promise((resolve) => {
-      get(`${BASE_URL}`, (res) => {
-        resolve(res);
-      });
-    });
-
-    // Check if the server is running
-    expect(res.statusCode).toEqual(200);
-    expect(res.read().toString()).toEqual('OK');
+  afterAll(() => {
+    nock.cleanAll();
   });
 
   test('Only `url`', async () => {
+    const scope = nock(BASE_URL)
+      .get('/images/200x300.webp')
+      .replyWithFile(200, path.resolve(__dirname, 'fixture/200x300.webp'), {
+        'Content-Type': 'image/webp',
+      });
+
     const imgTest = parseImageParams(`${BASE_URL}/images/200x300.webp`);
     const expectedFilePath = `${process.cwd()}/200x300.webp`;
 
     expect((await download(imgTest)).path).toEqual(expectedFilePath);
+    scope.done();
     expect(fs.existsSync(expectedFilePath)).toBe(true);
   });
 
@@ -329,6 +320,7 @@ describe('`download()`', () => {
     const imgTest = parseImageParams(`${BASE_URL}/images/200x300`, {
       directory: '/new-root-dir-no-access',
     });
+
     await expect(download(imgTest)).rejects.toThrow(DirectoryError);
   });
 
@@ -345,9 +337,5 @@ describe('`download()`', () => {
   test('should throw an error if the response is not an image', async () => {
     const imgTest = parseImageParams(BASE_URL);
     await expect(download(imgTest)).rejects.toThrow(RequestError);
-  });
-
-  afterAll(async () => {
-    await server.close();
   });
 });
