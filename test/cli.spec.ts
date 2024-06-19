@@ -1,7 +1,11 @@
 import { $ } from 'execa';
 import fs from 'node:fs';
-import { afterAll, beforeAll, describe, expect, test } from 'vitest';
-import { DEFAULT_EXTENSION, DEFAULT_NAME } from '~/constanta.js';
+import { afterAll, afterEach, beforeAll, describe, expect, test } from 'vitest';
+import {
+  DEFAULT_EXTENSION,
+  DEFAULT_NAME,
+  imageExtensions,
+} from '~/constanta.js';
 import { BASE_URL } from './fixture/constanta.js';
 
 describe('cli', () => {
@@ -10,6 +14,16 @@ describe('cli', () => {
 
   beforeAll(async () => {
     await $`tsup src/index.ts src/cli.ts --format esm -d ${distDir} --clean --dts src/index.ts`;
+  });
+
+  afterEach(() => {
+    // Clean up all images files in the current directory
+    fs.readdirSync(process.cwd()).forEach((file) => {
+      const ext = file.split('.').pop();
+      if (ext && imageExtensions.has(ext.toLowerCase())) {
+        fs.unlinkSync(file);
+      }
+    });
   });
 
   afterAll(() => {
@@ -21,7 +35,7 @@ describe('cli', () => {
     const { stdout } = await $`node ${distDir}/cli.js ${testUrl}`;
 
     expect(stdout).toMatch('Done!');
-    expect(fs.existsSync(expectedFilePath)).toBe(true);
+    expect(() => fs.accessSync(expectedFilePath)).not.toThrowError();
   });
 
   test.todo('with `--dir` argument', async () => {
@@ -31,7 +45,7 @@ describe('cli', () => {
 
     try {
       expect(stdout).toMatch('Done!');
-      expect(fs.existsSync(expectedFilePath)).toBe(true);
+      expect(() => fs.accessSync(expectedFilePath)).not.toThrowError();
     } finally {
       // Cleanup
       fs.rmSync(expectedDirPath, { recursive: true });
@@ -44,7 +58,7 @@ describe('cli', () => {
       await $`node ${distDir}/cli.js ${testUrl} --name=custom-name`;
 
     expect(stdout).toMatch('Done!');
-    expect(fs.existsSync(expectedFilePath)).toBe(true);
+    expect(() => fs.accessSync(expectedFilePath)).not.toThrowError();
   });
 
   test.todo('with `--silent` argument', async () => {
@@ -52,7 +66,7 @@ describe('cli', () => {
     const { stdout } = await $`node ${distDir}/cli.js ${testUrl} --silent`;
 
     expect(stdout).toBe('');
-    expect(fs.existsSync(expectedFilePath)).toBe(true);
+    expect(() => fs.accessSync(expectedFilePath)).not.toThrowError();
   });
 
   test('should throw an error if arguments is invalid', async () => {
@@ -94,7 +108,7 @@ describe('cli', () => {
 
       expect(stdout).toMatch('Done!');
       expectedFilePaths.forEach((filepath) => {
-        expect(fs.existsSync(filepath)).toBe(true);
+        expect(() => fs.accessSync(filepath)).not.toThrowError();
       });
     });
 
@@ -150,7 +164,7 @@ describe('cli', () => {
 
       expect(stdout).toMatch('Done!');
       expectedFilePaths.forEach((filepath) => {
-        expect(fs.existsSync(filepath)).toBe(true);
+        expect(() => fs.accessSync(filepath)).not.toThrowError();
       });
     });
 
@@ -166,7 +180,7 @@ describe('cli', () => {
 
       expect(stdout).toMatch('Done!');
       expectedFilePaths.forEach((filepath) => {
-        expect(fs.existsSync(filepath)).toBe(true);
+        expect(() => fs.accessSync(filepath)).not.toThrowError();
       });
     });
   });

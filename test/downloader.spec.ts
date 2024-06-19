@@ -313,7 +313,7 @@ describe('`download()`', () => {
 
     expect((await download(imgTest)).path).toEqual(expectedFilePath);
     scope.done();
-    expect(fs.existsSync(expectedFilePath)).toBe(true);
+    expect(() => fs.accessSync(expectedFilePath)).not.toThrowError();
   });
 
   test('should throw an error if the directory cannot be created', async () => {
