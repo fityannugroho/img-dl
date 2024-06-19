@@ -53,3 +53,7 @@ export function startMockServer() {
 export function stopMockServer() {
   nock.cleanAll();
 }
+
+export function isMockServerActive() {
+  return nock.isActive();
+}

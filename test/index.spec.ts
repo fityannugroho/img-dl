@@ -15,7 +15,11 @@ import {
 } from '~/constanta.js';
 import imgdl from '~/index.js';
 import { BASE_URL } from './fixture/constanta.js';
-import { startMockServer, stopMockServer } from './fixture/mockServer.js';
+import {
+  isMockServerActive,
+  startMockServer,
+  stopMockServer,
+} from './fixture/mockServer.js';
 
 describe('`imgdl()`', () => {
   beforeAll(() => {
@@ -34,6 +38,10 @@ describe('`imgdl()`', () => {
 
   afterAll(() => {
     stopMockServer();
+  });
+
+  test('ensure mock server is active', async () => {
+    expect(isMockServerActive()).toBe(true);
   });
 
   test('single image download', async () => {
