@@ -1,11 +1,7 @@
 import { $ } from 'execa';
 import fs from 'node:fs';
-import { afterAll, afterEach, beforeAll, describe, expect, test } from 'vitest';
-import {
-  DEFAULT_EXTENSION,
-  DEFAULT_NAME,
-  imageExtensions,
-} from '~/constanta.js';
+import { afterAll, beforeAll, describe, expect, test } from 'vitest';
+import { DEFAULT_EXTENSION, DEFAULT_NAME } from '~/constanta.js';
 import { BASE_URL } from './fixture/constanta.js';
 
 describe('cli', () => {
@@ -14,16 +10,6 @@ describe('cli', () => {
 
   beforeAll(async () => {
     await $`tsup src/index.ts src/cli.ts --format esm -d ${distDir} --clean --dts src/index.ts`;
-  });
-
-  afterEach(() => {
-    // Clean up all images files in the current directory
-    fs.readdirSync(process.cwd()).forEach((file) => {
-      const ext = file.split('.').pop();
-      if (ext && imageExtensions.has(ext.toLowerCase())) {
-        fs.unlinkSync(file);
-      }
-    });
   });
 
   afterAll(() => {

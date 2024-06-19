@@ -1,7 +1,6 @@
 import { HTTPError, RequestError } from 'got';
-import nock from 'nock';
 import fs from 'node:fs';
-import { afterAll, afterEach, describe, expect, test } from 'vitest';
+import { describe, expect, test } from 'vitest';
 import {
   DEFAULT_EXTENSION,
   DEFAULT_NAME,
@@ -11,7 +10,6 @@ import { download, parseImageParams } from '~/downloader.js';
 import ArgumentError from '~/errors/ArgumentError.js';
 import DirectoryError from '~/errors/DirectoryError.js';
 import { BASE_URL } from './fixture/constanta.js';
-import path from 'node:path';
 
 describe('`parseImageParams()`', () => {
   const urlTest = `${BASE_URL}/images/200x300`;
@@ -284,35 +282,11 @@ describe('`parseImageParams()`', () => {
 });
 
 describe('`download()`', () => {
-  afterEach(() => {
-    // Clean up all images files in the current directory
-    fs.readdirSync(process.cwd()).forEach((file) => {
-      const ext = file.split('.').pop();
-      if (ext && imageExtensions.has(ext.toLowerCase())) {
-        fs.unlinkSync(file);
-      }
-    });
-
-    // Restore the nock
-    nock.restore();
-  });
-
-  afterAll(() => {
-    nock.cleanAll();
-  });
-
   test('Only `url`', async () => {
-    const scope = nock(BASE_URL)
-      .get('/images/200x300.webp')
-      .replyWithFile(200, path.resolve(__dirname, 'fixture/200x300.webp'), {
-        'Content-Type': 'image/webp',
-      });
-
     const imgTest = parseImageParams(`${BASE_URL}/images/200x300.webp`);
     const expectedFilePath = `${process.cwd()}/200x300.webp`;
 
     expect((await download(imgTest)).path).toEqual(expectedFilePath);
-    scope.done();
     expect(() => fs.accessSync(expectedFilePath)).not.toThrowError();
   });
 

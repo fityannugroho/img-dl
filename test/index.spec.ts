@@ -1,49 +1,10 @@
 import fs from 'node:fs';
-import {
-  afterAll,
-  afterEach,
-  beforeAll,
-  describe,
-  expect,
-  test,
-  vi,
-} from 'vitest';
-import {
-  DEFAULT_EXTENSION,
-  DEFAULT_NAME,
-  imageExtensions,
-} from '~/constanta.js';
+import { describe, expect, test, vi } from 'vitest';
+import { DEFAULT_EXTENSION, DEFAULT_NAME } from '~/constanta.js';
 import imgdl from '~/index.js';
 import { BASE_URL } from './fixture/constanta.js';
-import {
-  isMockServerActive,
-  startMockServer,
-  stopMockServer,
-} from './fixture/mockServer.js';
 
 describe('`imgdl()`', () => {
-  beforeAll(() => {
-    startMockServer();
-  });
-
-  afterEach(() => {
-    // Clean up all images files in the current directory
-    fs.readdirSync(process.cwd()).forEach((file) => {
-      const ext = file.split('.').pop();
-      if (ext && imageExtensions.has(ext.toLowerCase())) {
-        fs.unlinkSync(file);
-      }
-    });
-  });
-
-  afterAll(() => {
-    stopMockServer();
-  });
-
-  test('ensure mock server is active', async () => {
-    expect(isMockServerActive()).toBe(true);
-  });
-
   test('single image download', async () => {
     const url = `${BASE_URL}/images/200x300.webp`;
     const expectedFilePath = `${process.cwd()}/200x300.webp`;

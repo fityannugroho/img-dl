@@ -11,5 +11,6 @@ export default defineConfig({
       provider: 'v8',
     },
     testTimeout: 5000,
+    setupFiles: ['./vitest.setup.ts'],
   },
 });
