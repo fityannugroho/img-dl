@@ -31,7 +31,7 @@ describe('`imgdl()`', () => {
     const expectedFilePath = `${process.cwd()}/200x300.webp`;
 
     expect((await imgdl(url)).path).toEqual(expectedFilePath);
-    expect(fs.existsSync(expectedFilePath)).toBe(true);
+    expect(() => fs.accessSync(expectedFilePath)).not.toThrow();
   });
 
   describe('multiple', () => {
@@ -59,7 +59,7 @@ describe('`imgdl()`', () => {
         expectedFilePaths.sort(),
       );
       expectedFilePaths.forEach((filepath) => {
-        expect(fs.existsSync(filepath)).toBe(true);
+        expect(() => fs.accessSync(filepath)).not.toThrow();
       });
     });
 
@@ -78,7 +78,7 @@ describe('`imgdl()`', () => {
         expectedFilePaths.sort(),
       );
       expectedFilePaths.forEach((filepath) => {
-        expect(fs.existsSync(filepath)).toBe(true);
+        expect(() => fs.accessSync(filepath)).not.toThrow();
       });
     });
 
@@ -94,7 +94,7 @@ describe('`imgdl()`', () => {
           expectedFilePaths.sort(),
         );
         expectedFilePaths.forEach((filepath) => {
-          expect(fs.existsSync(filepath)).toBe(true);
+          expect(() => fs.accessSync(filepath)).not.toThrow();
         });
       } finally {
         // Clean up the directory with all its content
@@ -113,7 +113,7 @@ describe('`imgdl()`', () => {
         expectedFilePaths.sort(),
       );
       expectedFilePaths.forEach((filepath) => {
-        expect(fs.existsSync(filepath)).toBe(true);
+        expect(() => fs.accessSync(filepath)).not.toThrow();
       });
     });
 
@@ -134,7 +134,7 @@ describe('`imgdl()`', () => {
       expect(downloadCount).toEqual(2);
 
       expectedFilePaths.forEach((filepath) => {
-        expect(fs.existsSync(filepath)).toBe(true);
+        expect(() => fs.accessSync(filepath)).not.toThrow();
       });
     });
 

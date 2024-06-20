@@ -296,7 +296,7 @@ describe('`download()`', () => {
     const expectedFilePath = `${process.cwd()}/200x300.webp`;
 
     expect((await download(imgTest)).path).toEqual(expectedFilePath);
-    expect(fs.existsSync(expectedFilePath)).toBe(true);
+    expect(() => fs.accessSync(expectedFilePath)).not.toThrow();
   });
 
   test('should throw an error if the directory cannot be created', async () => {

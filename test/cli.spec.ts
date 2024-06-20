@@ -39,7 +39,7 @@ describe('cli', () => {
     const { stdout } = await $`node dist/cli.js ${validTestUrl}`;
 
     expect(stdout).toMatch('Done!');
-    expect(fs.existsSync(expectedFilePath)).toBe(true);
+    expect(() => fs.accessSync(expectedFilePath)).not.toThrow();
   });
 
   test('with `--dir` argument', async () => {
@@ -49,7 +49,7 @@ describe('cli', () => {
 
     try {
       expect(stdout).toMatch('Done!');
-      expect(fs.existsSync(expectedFilePath)).toBe(true);
+      expect(() => fs.accessSync(expectedFilePath)).not.toThrow();
     } finally {
       // Cleanup
       fs.rmSync(expectedDirPath, { recursive: true });
@@ -62,7 +62,7 @@ describe('cli', () => {
       await $`node dist/cli.js ${validTestUrl} --name=custom-name`;
 
     expect(stdout).toMatch('Done!');
-    expect(fs.existsSync(expectedFilePath)).toBe(true);
+    expect(() => fs.accessSync(expectedFilePath)).not.toThrow();
   });
 
   test('with `--silent` argument', async () => {
@@ -70,7 +70,7 @@ describe('cli', () => {
     const { stdout } = await $`node dist/cli.js ${validTestUrl} --silent`;
 
     expect(stdout).toBe('');
-    expect(fs.existsSync(expectedFilePath)).toBe(true);
+    expect(() => fs.accessSync(expectedFilePath)).not.toThrow();
   });
 
   test('should throw an error if arguments is invalid', async () => {
@@ -116,7 +116,7 @@ describe('cli', () => {
 
       expect(stdout).toMatch('Done!');
       expectedFilePaths.forEach((filepath) => {
-        expect(fs.existsSync(filepath)).toBe(true);
+        expect(() => fs.accessSync(filepath)).not.toThrow();
       });
     });
 
@@ -176,7 +176,7 @@ describe('cli', () => {
 
       expect(stdout).toMatch('Done!');
       expectedFilePaths.forEach((filepath) => {
-        expect(fs.existsSync(filepath)).toBe(true);
+        expect(() => fs.accessSync(filepath)).not.toThrow();
       });
     });
 
@@ -192,7 +192,7 @@ describe('cli', () => {
 
       expect(stdout).toMatch('Done!');
       expectedFilePaths.forEach((filepath) => {
-        expect(fs.existsSync(filepath)).toBe(true);
+        expect(() => fs.accessSync(filepath)).not.toThrow();
       });
     });
   });
