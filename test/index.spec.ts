@@ -1,26 +1,53 @@
 import fs from 'node:fs';
-import { describe, expect, test, vi } from 'vitest';
+import { afterAll, beforeAll, describe, expect, test, vi } from 'vitest';
 import { DEFAULT_EXTENSION, DEFAULT_NAME } from '~/constanta.js';
 import imgdl from '~/index.js';
+import { FastifyInstance } from 'fastify';
+import { buildFastify } from './fixture/mocks/server.js';
+
+let app: FastifyInstance;
+let baseUrl: string;
+
+beforeAll(async () => {
+  app = buildFastify();
+  await app.listen();
+
+  const address = app.server.address();
+  if (!address) {
+    throw new Error('Server not running');
+  }
+
+  baseUrl =
+    typeof address === 'string' ? address : `http://localhost:${address.port}`;
+});
+
+afterAll(async () => {
+  await app.close();
+});
 
 describe('`imgdl()`', () => {
-  test('single', async () => {
-    const url = 'https://picsum.photos/200/300.webp';
-    const expectedFilePath = `${process.cwd()}/300.webp`;
+  test('single image download', async () => {
+    const url = `${baseUrl}/images/200x300.webp`;
+    const expectedFilePath = `${process.cwd()}/200x300.webp`;
 
     expect((await imgdl(url)).path).toEqual(expectedFilePath);
-    expect(fs.existsSync(expectedFilePath)).toBe(true); // Ensure the image is actually exists
-
-    // Cleanup
-    fs.unlinkSync(expectedFilePath);
+    expect(fs.existsSync(expectedFilePath)).toBe(true);
   });
 
   describe('multiple', () => {
-    const testUrls = [
-      'https://picsum.photos/200/300.webp',
-      'https://picsum.photos/200/300',
+    let testUrls: string[];
+
+    const expectedNames = [
+      '200x300.webp',
+      `${DEFAULT_NAME}.${DEFAULT_EXTENSION}`,
     ];
-    const expectedNames = ['300.webp', `${DEFAULT_NAME}.${DEFAULT_EXTENSION}`];
+
+    beforeAll(() => {
+      testUrls = [
+        `${baseUrl}/images/200x300.webp`,
+        `${baseUrl}/images/200x300`,
+      ];
+    });
 
     test('only array of `url`s', async () => {
       const expectedFilePaths = expectedNames.map(
@@ -32,8 +59,26 @@ describe('`imgdl()`', () => {
         expectedFilePaths.sort(),
       );
       expectedFilePaths.forEach((filepath) => {
-        expect(fs.existsSync(filepath)).toBe(true); // Ensure the image is actually exists
-        fs.unlinkSync(filepath); // Cleanup
+        expect(fs.existsSync(filepath)).toBe(true);
+      });
+    });
+
+    test('duplicate `url`s', async () => {
+      const images = await imgdl([
+        `${baseUrl}/images/200x300`,
+        `${baseUrl}/images/200x300`,
+      ]);
+
+      const expectedFilePaths = [
+        `${process.cwd()}/${DEFAULT_NAME}.${DEFAULT_EXTENSION}`,
+        `${process.cwd()}/${DEFAULT_NAME} (1).${DEFAULT_EXTENSION}`,
+      ];
+
+      expect(images.map((img) => img.path).sort()).toEqual(
+        expectedFilePaths.sort(),
+      );
+      expectedFilePaths.forEach((filepath) => {
+        expect(fs.existsSync(filepath)).toBe(true);
       });
     });
 
@@ -44,13 +89,17 @@ describe('`imgdl()`', () => {
       );
       const images = await imgdl(testUrls, { directory });
 
-      expect(images.map((img) => img.path).sort()).toEqual(
-        expectedFilePaths.sort(),
-      );
-      expectedFilePaths.forEach((filepath) => {
-        expect(fs.existsSync(filepath)).toBe(true); // Ensure the image is actually exists
-        fs.unlinkSync(filepath); // Cleanup
-      });
+      try {
+        expect(images.map((img) => img.path).sort()).toEqual(
+          expectedFilePaths.sort(),
+        );
+        expectedFilePaths.forEach((filepath) => {
+          expect(fs.existsSync(filepath)).toBe(true);
+        });
+      } finally {
+        // Clean up the directory with all its content
+        fs.rmSync(`${process.cwd()}/${directory}`, { recursive: true });
+      }
     });
 
     test('with `name` argument', async () => {
@@ -64,8 +113,7 @@ describe('`imgdl()`', () => {
         expectedFilePaths.sort(),
       );
       expectedFilePaths.forEach((filepath) => {
-        expect(fs.existsSync(filepath)).toBe(true); // Ensure the image is actually exists
-        fs.unlinkSync(filepath); // Cleanup
+        expect(fs.existsSync(filepath)).toBe(true);
       });
     });
 
@@ -86,8 +134,7 @@ describe('`imgdl()`', () => {
       expect(downloadCount).toEqual(2);
 
       expectedFilePaths.forEach((filepath) => {
-        expect(fs.existsSync(filepath)).toBe(true); // Ensure the image is actually exists
-        fs.unlinkSync(filepath); // Cleanup
+        expect(fs.existsSync(filepath)).toBe(true);
       });
     });
 

@@ -1,13 +1,35 @@
 import { HTTPError, RequestError } from 'got';
 import fs from 'node:fs';
-import { describe, expect, test } from 'vitest';
+import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { DEFAULT_EXTENSION, DEFAULT_NAME } from '~/constanta.js';
 import { download, parseImageParams } from '~/downloader.js';
 import ArgumentError from '~/errors/ArgumentError.js';
 import DirectoryError from '~/errors/DirectoryError.js';
+import { buildFastify } from './fixture/mocks/server.js';
+import { FastifyInstance } from 'fastify';
+
+let app: FastifyInstance;
+let baseUrl: string;
+
+beforeAll(async () => {
+  app = buildFastify();
+  await app.listen();
+
+  const address = app.server.address();
+  if (!address) {
+    throw new Error('Server not running');
+  }
+
+  baseUrl =
+    typeof address === 'string' ? address : `http://localhost:${address.port}`;
+});
+
+afterAll(async () => {
+  await app.close();
+});
 
 describe('`parseImageParams()`', () => {
-  const urlTest = 'https://picsum.photos/200/300';
+  const urlTest = `${baseUrl}/images/200x300`;
   const defaultExpected = {
     url: urlTest,
     directory: process.cwd(),
@@ -19,16 +41,16 @@ describe('`parseImageParams()`', () => {
   };
 
   test('Only `url` with file ending', () => {
-    const url = 'https://picsum.photos/200/300.webp';
+    const url = `${baseUrl}/200x300.webp`;
 
     expect(parseImageParams(url)).toEqual({
       ...defaultExpected,
       url,
-      name: '300',
+      name: '200x300',
       extension: 'webp',
-      originalName: '300',
+      originalName: '200x300',
       originalExtension: 'webp',
-      path: `${defaultExpected.directory}/300.webp`,
+      path: `${defaultExpected.directory}/200x300.webp`,
     });
   });
 
@@ -48,20 +70,16 @@ describe('`parseImageParams()`', () => {
       path: `${defaultExpected.directory}/${defaultExpected.name} (1).${defaultExpected.extension}`,
     });
 
-    // // Add the test image file with suffix ' (1)'
+    // Add the test image file with suffix ' (1)'
     const existingFilePathWithSuffix = `${defaultExpected.directory}/${defaultExpected.name} (1).${defaultExpected.extension}`;
     fs.writeFileSync(existingFilePathWithSuffix, 'test image content');
 
-    // // Test the `parseImageParams()` and make sure it returns name with suffix ' (2)'
+    // Test the `parseImageParams()` and make sure it returns name with suffix ' (2)'
     expect(parseImageParams(urlTest)).toEqual({
       ...defaultExpected,
       name: `${defaultExpected.name} (2)`,
       path: `${defaultExpected.directory}/${defaultExpected.name} (2).${defaultExpected.extension}`,
     });
-
-    // // Clean up the test image files
-    fs.unlinkSync(existingFilePath);
-    fs.unlinkSync(existingFilePathWithSuffix);
   });
 
   describe('with `directory` argument', () => {
@@ -169,45 +187,6 @@ describe('`parseImageParams()`', () => {
       });
     });
 
-    // test('function returns empty string', () => {
-    //   expect(parseImageParams(urlTest, { name: () => '' })).toEqual({
-    //     ...defaultExpected,
-    //     name: DEFAULT_NAME,
-    //   });
-    // });
-
-    // test('function returns string', () => {
-    //   expect(parseImageParams(urlTest, { name: () => 'test' })).toEqual({
-    //     ...defaultExpected,
-    //     name: 'test',
-    //     path: `${defaultExpected.directory}/test.${defaultExpected.extension}`,
-    //   });
-    // });
-
-    // test('function with original name', () => {
-    //   expect(
-    //     parseImageParams(urlTest, { name: (ori) => `test-${ori}` }),
-    //   ).toEqual({
-    //     ...defaultExpected,
-    //     name: 'test-undefined',
-    //     path: `${defaultExpected.directory}/test-undefined.${defaultExpected.extension}`,
-    //   });
-
-    //   expect(
-    //     parseImageParams('https://picsum.photos/200/300.webp', {
-    //       name: (ori) => `test-${ori}`,
-    //     }),
-    //   ).toEqual({
-    //     ...defaultExpected,
-    //     url: 'https://picsum.photos/200/300.webp',
-    //     name: 'test-300',
-    //     extension: 'webp',
-    //     originalName: '300',
-    //     originalExtension: 'webp',
-    //     path: `${defaultExpected.directory}/test-300.webp`,
-    //   });
-    // });
-
     test('invalid: contain prohibited characters', () => {
       expect(() => parseImageParams(urlTest, { name: 'test<image' })).toThrow(
         ArgumentError,
@@ -313,34 +292,32 @@ describe('`parseImageParams()`', () => {
 
 describe('`download()`', () => {
   test('Only `url`', async () => {
-    const url = 'https://picsum.photos/200/300.webp';
-    const expectedFilePath = `${process.cwd()}/300.webp`;
+    const imgTest = parseImageParams(`${baseUrl}/images/200x300.webp`);
+    const expectedFilePath = `${process.cwd()}/200x300.webp`;
 
-    expect((await download(url)).path).toEqual(expectedFilePath);
-    expect(fs.existsSync(expectedFilePath)).toBe(true); // Ensure the image is actually exists
-
-    // Cleanup
-    fs.unlinkSync(expectedFilePath);
+    expect((await download(imgTest)).path).toEqual(expectedFilePath);
+    expect(fs.existsSync(expectedFilePath)).toBe(true);
   });
 
   test('should throw an error if the directory cannot be created', async () => {
-    const url = 'https://picsum.photos/200/300';
-    const directory = '/new-root-dir-no-access';
-    await expect(download(url, { directory })).rejects.toThrow(DirectoryError);
+    const imgTest = parseImageParams(`${baseUrl}/images/200x300`, {
+      directory: '/new-root-dir-no-access',
+    });
+    await expect(download(imgTest)).rejects.toThrow(DirectoryError);
   });
 
   test('should throw an error if the URL is invalid', async () => {
-    const url = 'invalid-url';
-    await expect(download(url)).rejects.toThrow(RequestError);
+    const imgTest = parseImageParams('invalid-url');
+    await expect(download(imgTest)).rejects.toThrow(RequestError);
   });
 
   test('should throw an error if the response is unsuccessful', async () => {
-    const url = 'https://picsum.photos/xxx';
-    await expect(download(url)).rejects.toThrow(HTTPError);
+    const imgTest = parseImageParams(`${baseUrl}/xxx`);
+    await expect(download(imgTest)).rejects.toThrow(HTTPError);
   });
 
   test('should throw an error if the response is not an image', async () => {
-    const url = 'https://picsum.photos';
-    await expect(download(url)).rejects.toThrow(RequestError);
+    const imgTest = parseImageParams(baseUrl);
+    await expect(download(imgTest)).rejects.toThrow(RequestError);
   });
 });

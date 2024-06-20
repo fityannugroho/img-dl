@@ -1,36 +1,59 @@
 import { $ } from 'execa';
 import fs from 'node:fs';
-import path from 'node:path';
-import { beforeAll, describe, expect, test } from 'vitest';
+import { afterAll, beforeAll, describe, expect, test } from 'vitest';
+import { DEFAULT_EXTENSION, DEFAULT_NAME } from '~/constanta.js';
+import { FastifyInstance } from 'fastify';
+import { buildFastify } from './fixture/mocks/server.js';
+
+let app: FastifyInstance;
+let baseUrl: string;
+
+beforeAll(async () => {
+  await $`npm run build`;
+
+  app = buildFastify();
+  await app.listen();
+
+  const address = app.server.address();
+  if (!address) {
+    throw new Error('Server not running');
+  }
+
+  baseUrl =
+    typeof address === 'string' ? address : `http://localhost:${address.port}`;
+});
+
+afterAll(async () => {
+  await app.close();
+});
 
 describe('cli', () => {
-  const validTestUrl = 'https://picsum.photos/200/300.webp';
+  let validTestUrl: string;
 
-  beforeAll(async () => {
-    await $`npm run build`;
+  beforeAll(() => {
+    validTestUrl = `${baseUrl}/images/200x300.webp`;
   });
 
   test('Only URL', async () => {
-    const expectedFilePath = `${process.cwd()}/300.webp`;
+    const expectedFilePath = `${process.cwd()}/200x300.webp`;
     const { stdout } = await $`node dist/cli.js ${validTestUrl}`;
 
     expect(stdout).toMatch('Done!');
     expect(fs.existsSync(expectedFilePath)).toBe(true);
-
-    // Cleanup
-    fs.unlinkSync(expectedFilePath);
   });
 
   test('with `--dir` argument', async () => {
-    const expectedFilePath = `${process.cwd()}/images/300.webp`;
+    const expectedDirPath = `${process.cwd()}/images`;
+    const expectedFilePath = `${expectedDirPath}/200x300.webp`;
     const { stdout } = await $`node dist/cli.js ${validTestUrl} --dir=images`;
 
-    expect(stdout).toMatch('Done!');
-    expect(fs.existsSync(expectedFilePath)).toBe(true);
-
-    // Cleanup
-    fs.unlinkSync(expectedFilePath);
-    fs.rmdirSync(path.dirname(expectedFilePath));
+    try {
+      expect(stdout).toMatch('Done!');
+      expect(fs.existsSync(expectedFilePath)).toBe(true);
+    } finally {
+      // Cleanup
+      fs.rmSync(expectedDirPath, { recursive: true });
+    }
   });
 
   test('with `--name` argument', async () => {
@@ -40,20 +63,14 @@ describe('cli', () => {
 
     expect(stdout).toMatch('Done!');
     expect(fs.existsSync(expectedFilePath)).toBe(true);
-
-    // Cleanup
-    fs.unlinkSync(expectedFilePath);
   });
 
   test('with `--silent` argument', async () => {
-    const expectedFilePath = `${process.cwd()}/300.webp`;
+    const expectedFilePath = `${process.cwd()}/200x300.webp`;
     const { stdout } = await $`node dist/cli.js ${validTestUrl} --silent`;
 
     expect(stdout).toBe('');
     expect(fs.existsSync(expectedFilePath)).toBe(true);
-
-    // Cleanup
-    fs.unlinkSync(expectedFilePath);
   });
 
   test('should throw an error if arguments is invalid', async () => {
@@ -73,24 +90,26 @@ describe('cli', () => {
   });
 
   test('should throw an error if the response is unsuccessful', async () => {
-    await expect(
-      $`node dist/cli.js https://picsum.photos/xxx`,
-    ).rejects.toThrow();
+    await expect($`node dist/cli.js ${baseUrl}/xxx`).rejects.toThrow();
   });
 
   test('should throw an error if the response is not an image', async () => {
-    await expect($`node dist/cli.js https://picsum.photos`).rejects.toThrow();
+    await expect($`node dist/cli.js ${baseUrl}`).rejects.toThrow();
   });
 
   describe('Multiple URLs', () => {
-    const validTestUrls = [
-      'https://picsum.photos/200/300.webp',
-      'https://picsum.photos/200/300',
-    ];
     const expectedFilePaths = [
-      `${process.cwd()}/300.webp`,
-      `${process.cwd()}/image.jpg`,
+      `${process.cwd()}/200x300.webp`,
+      `${process.cwd()}/${DEFAULT_NAME}.${DEFAULT_EXTENSION}`,
     ];
+    let validTestUrls: string[];
+
+    beforeAll(() => {
+      validTestUrls = [
+        `${baseUrl}/images/200x300.webp`,
+        `${baseUrl}/images/200x300`,
+      ];
+    });
 
     test('Only URLs', async () => {
       const { stdout } = await $`node dist/cli.js ${validTestUrls}`;
@@ -98,9 +117,6 @@ describe('cli', () => {
       expect(stdout).toMatch('Done!');
       expectedFilePaths.forEach((filepath) => {
         expect(fs.existsSync(filepath)).toBe(true);
-
-        // Cleanup
-        fs.unlinkSync(filepath);
       });
     });
 
@@ -118,7 +134,11 @@ describe('cli', () => {
   });
 
   describe('Increment download', () => {
-    const testUrl = 'https://picsum.photos/200/{i}.webp';
+    let testUrl: string;
+
+    beforeAll(() => {
+      testUrl = `${baseUrl}/images/img-{i}.webp`;
+    });
 
     test('should throw an error if the end index is not specified', async () => {
       await expect(
@@ -140,24 +160,39 @@ describe('cli', () => {
 
     test('should throw an error if the URL does not contain the index placeholder', async () => {
       await expect(
-        $`node dist/cli.js https://picsum.photos/200/300.webp --increment --end=10`,
+        $`node dist/cli.js ${baseUrl}/images/200x300.webp --increment --end=10`,
       ).rejects.toThrow();
     });
 
     test('Valid', async () => {
-      const expectedFilePaths = [
-        `${process.cwd()}/300.webp`,
-        `${process.cwd()}/301.webp`,
-      ];
       const { stdout } =
-        await $`node dist/cli.js ${testUrl} --increment --start=300 --end=301`;
+        await $`node dist/cli.js ${testUrl} --increment --start=300 --end=302`;
+
+      const expectedFilePaths = [
+        `${process.cwd()}/img-300.webp`,
+        `${process.cwd()}/img-301.webp`,
+        `${process.cwd()}/img-302.webp`,
+      ];
 
       expect(stdout).toMatch('Done!');
       expectedFilePaths.forEach((filepath) => {
         expect(fs.existsSync(filepath)).toBe(true);
+      });
+    });
 
-        // Cleanup
-        fs.unlinkSync(filepath);
+    test('Valid without extension in url', async () => {
+      const { stdout } =
+        await $`node dist/cli.js ${baseUrl}/images/img-{i} --increment --start=1 --end=3`;
+
+      const expectedFilePaths = [
+        `${process.cwd()}/${DEFAULT_NAME}.${DEFAULT_EXTENSION}`,
+        `${process.cwd()}/${DEFAULT_NAME} (1).${DEFAULT_EXTENSION}`,
+        `${process.cwd()}/${DEFAULT_NAME} (2).${DEFAULT_EXTENSION}`,
+      ];
+
+      expect(stdout).toMatch('Done!');
+      expectedFilePaths.forEach((filepath) => {
+        expect(fs.existsSync(filepath)).toBe(true);
       });
     });
   });

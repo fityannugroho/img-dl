@@ -17,7 +17,7 @@ const cli = meow(
   PARAMETERS
     url   The URL of the image to download. Provide multiple URLs to download multiple images.
           In increment mode, the URL must contain {i} placeholder for the index,
-          only one URL is allowed, and the 'end' flag is required.
+          only one URL is allowed, and the '--end' is required.
 
   OPTIONS
     -d, --dir=<path>          The output directory. Default: current working directory
@@ -27,7 +27,7 @@ const cli = meow(
     -H, --header=<header>     The header to send with the request. Can be used multiple times
     -i, --increment           Enable increment mode. Default: false
         --interval=<number>   The interval between each batch of requests in milliseconds
-    -n, --name=<filename>     The filename. Default: original filename or timestamp
+    -n, --name=<filename>     The filename. If not specified, the original filename will be used. Default: 'image'
         --max-retry=<number>  Set the maximum number of times to retry the request if it fails
         --silent              Disable logging
         --start=<number>      The start index for increment mode. Default: 0

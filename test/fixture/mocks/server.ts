@@ -5,7 +5,7 @@ import path from 'path';
 const DEFAULT_IMAGE_NAME = '200x300';
 const DEFAULT_IMAGE_EXTENSION = 'jpg';
 
-export function buildServer() {
+export function buildFastify() {
   const server = fastify();
 
   server.get('/', async () => {
@@ -34,7 +34,7 @@ export function buildServer() {
       }
     }
 
-    const imagePath = path.join(__dirname, 'assets', imageName);
+    const imagePath = path.resolve(__dirname, '..', imageName);
 
     // Return 404 if the image path doesn't exist.
     if (!fs.existsSync(imagePath)) {
