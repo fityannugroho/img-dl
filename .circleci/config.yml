@@ -7,14 +7,14 @@ executors:
     parameters:
       node-version:
         type: string
-        default: '18.x'
+        default: '18.0'
 jobs:
   build-and-test:
     executor: node-executor
     parameters:
       node-version:
         type: string
-        default: '18.x'
+        default: '18.0'
     steps:
       - checkout
       - restore_cache:
@@ -36,4 +36,4 @@ workflows:
       - build-and-test:
           matrix:
             parameters:
-              node-version: ['18.x', '20.x']
+              node-version: ['18.0', '20.0']
