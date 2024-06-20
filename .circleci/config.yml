@@ -1,39 +1,38 @@
 version: 2.1
+
 orbs:
-  node: circleci/node@5.2
+  node: circleci/node@5.0.2
+
 jobs:
   build_and_test:
-    parameters:
-      node-version:
-        type: string
-        default: '18'
-    executor: node/default
+    executor:
+      name: node/default
+      tag: << matrix.version >>
     steps:
       - checkout
       - node/install-packages:
           pkg-manager: npm
-          node-version: << parameters.node-version >>
       - run:
-          name: Lint
           command: npm run lint
+          name: Lint code
       - run:
-          name: Build
-          command: npm run build --if-present
+          command: npm run build
+          name: Build app
       - run:
-          name: Test
           command: npm test
+          name: Run tests
       - persist_to_workspace:
           root: ~/project
           paths:
             - .
+
 workflows:
-  test:
+  test_my_app:
     jobs:
       - build_and_test:
           matrix:
             parameters:
-              node-version: ['18', '20']
+              version: ['18', '20']
           filters:
             branches:
-              only:
-                - main
+              only: main
