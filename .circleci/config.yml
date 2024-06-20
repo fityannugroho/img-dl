@@ -3,11 +3,16 @@ orbs:
   node: circleci/node@5.2
 jobs:
   build_and_test:
+    parameters:
+      node-version:
+        type: string
+        default: '18'
     executor: node/default
     steps:
       - checkout
       - node/install-packages:
           pkg-manager: npm
+          node-version: << parameters.node-version >>
       - run:
           name: Lint
           command: npm run lint
