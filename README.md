@@ -38,8 +38,8 @@ Image with different extension will be considered as **different** file, so it w
 
 ## Prerequisites
 
-- Node.js 18 or later
-- npm 9 or later
+- Node.js 20 or later
+- npm 10 or later
 
 ## Installation
 
