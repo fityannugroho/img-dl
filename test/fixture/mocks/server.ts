@@ -1,5 +1,6 @@
 import fastify from 'fastify';
 import fs from 'fs';
+import { fileURLToPath } from 'node:url';
 import path from 'path';
 
 const DEFAULT_IMAGE_NAME = '200x300';
@@ -12,7 +13,7 @@ export function buildFastify() {
     return 'OK';
   });
 
-  server.get('/images/:name', async (req: fastify.FastifyRequest, res) => {
+  server.get('/images/:name', async (req, res) => {
     let imageName = (req.params as { name: string }).name;
 
     // Use DEFAULT_IMAGE_NAME if the image name begins with 'img-' followed by a number.
@@ -34,18 +35,18 @@ export function buildFastify() {
       }
     }
 
-    const imagePath = path.resolve(__dirname, '..', imageName);
+    const dirname = path.dirname(fileURLToPath(import.meta.url));
+    const imagePath = path.resolve(dirname, '..', imageName);
 
-    // Return 404 if the image path doesn't exist.
-    if (!fs.existsSync(imagePath)) {
-      return res.status(404).send('Not Found');
-    }
-
-    const imageStream = fs.createReadStream(imagePath);
-
-    res.type('image/*');
-
-    return imageStream;
+    return await new Promise<fastify.FastifyReply>((resolve) => {
+      fs.readFile(imagePath, (err, data) => {
+        if (err) {
+          resolve(res.status(404).send('Not Found'));
+        } else {
+          resolve(res.type('image/*').send(data));
+        }
+      });
+    });
   });
 
   server.setNotFoundHandler((req, res) => {

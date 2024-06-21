@@ -1,11 +1,14 @@
-import path from 'node:path';
 import { defineConfig } from 'vitest/config';
+import { fileURLToPath } from 'url';
+import path from 'node:path';
+
+const dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
   test: {
     root: './',
     alias: {
-      '~': path.resolve(__dirname, './src'),
+      '~': path.resolve(dirname, './src'),
     },
     coverage: {
       provider: 'v8',

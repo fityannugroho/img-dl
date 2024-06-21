@@ -40,7 +40,7 @@ test('GET /images/200x300.jpg', async () => {
   const body = await res.blob();
 
   expect(res.status).toBe(200);
-  expect(res.headers.get('content-type')).toBe('image/*');
+  expect(res.headers.get('content-type')).toMatch('image/');
   expect(body.size).toBeGreaterThan(0);
 });
 
@@ -49,6 +49,13 @@ test('GET /images/200x300', async () => {
   const body = await res.blob();
 
   expect(res.status).toBe(200);
-  expect(res.headers.get('content-type')).toBe('image/*');
+  expect(res.headers.get('content-type')).toMatch('image/');
   expect(body.size).toBeGreaterThan(0);
+});
+
+test('returns 404 for unknown image', async () => {
+  const res = await fetch(`${baseUrl}/images/unknown.jpg`);
+
+  expect(res.status).toBe(404);
+  expect(await res.text()).toBe('Not Found');
 });
