@@ -88,14 +88,19 @@ export type Options = Omit<DownloadOptions, 'name'> & {
   signal?: AbortSignal;
 };
 
-async function imgdl(url: string, options?: Options): Promise<Image>;
-async function imgdl(url: string[], options?: Options): Promise<Image[]>;
+export type UrlItem = {
+  url: string,
+  name?: string
+}
+
+async function imgdl(url: string | UrlItem, options?: Options): Promise<Image>;
+async function imgdl(url: string[] | string[] | UrlItem[], options?: Options): Promise<Image[]>;
 async function imgdl(
-  url: string | string[],
+  url: string | string[] | UrlItem | UrlItem[],
   options?: Options,
 ): Promise<Image | Image[]>;
 async function imgdl(
-  url: string | string[],
+  url: string | string[] | UrlItem | UrlItem[],
   options?: Options,
 ): Promise<Image | Image[]> {
   if (Array.isArray(url)) {
@@ -109,24 +114,33 @@ async function imgdl(
     if (options?.signal) {
       setMaxListeners(Infinity, options.signal);
     }
-
+    
     return new Promise<Image[]>((resolve, reject) => {
       const images: Image[] = [];
+      const nms = new Set<string>()
 
       url.forEach((u, i) => {
+        const u_: UrlItem = typeof u === 'object' ? u :  {
+          url: u
+        }
         queue
           .add(
             async ({ signal }) => {
               try {
-                return await download(u, {
+                return await download(u_.url, {
                   ...options,
-                  name: (ori) =>
-                    `${options?.name ?? ori ?? DEFAULT_NAME}-${i + 1}`,
+                  name: (ori) => {
+                    const baseName = u_?.name ?? options?.name ?? ori ?? DEFAULT_NAME
+                    const name_ = nms.has(baseName) ? `${baseName}-${i + 1}` : baseName;
+
+                    nms.add(name_)
+                    return name_
+                  },
                   signal,
                 });
               } catch (error) {
                 if (error instanceof Error) {
-                  options?.onError?.(error, u);
+                  options?.onError?.(error, u_.url);
                   return undefined;
                 }
                 throw error;
@@ -158,7 +172,7 @@ async function imgdl(
     });
   }
 
-  return download(url, {
+  return download(typeof url === 'object' ? url.url : url, {
     ...options,
     signal: options?.signal,
   });
