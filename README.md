@@ -238,4 +238,4 @@ Set timeout for each request in milliseconds.
 
 Give a ⭐️ if this project helped you!
 
-You can support this project by donating via [GitHub Sponsors](https://github.com/sponsors/fityannugroho), [Trakteer](https://trakteer.id/fityannugroho/tip), or [Saweria](https://saweria.co/fityannugroho).
+Also please consider supporting this project with a donation. Your donation will help us maintain and develop this project and provide you with better support.
