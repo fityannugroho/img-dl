@@ -1,53 +1,22 @@
 import fs from 'node:fs';
-import { afterAll, beforeAll, describe, expect, test, vi } from 'vitest';
+import { describe, expect, test, vi } from 'vitest';
 import { DEFAULT_EXTENSION, DEFAULT_NAME } from '~/constanta.js';
 import imgdl from '~/index.js';
-import { FastifyInstance } from 'fastify';
-import { buildFastify } from './fixture/mocks/server.js';
 
-let app: FastifyInstance;
-let baseUrl: string;
-
-beforeAll(async () => {
-  app = buildFastify();
-  await app.listen();
-
-  const address = app.server.address();
-  if (!address) {
-    throw new Error('Server not running');
-  }
-
-  baseUrl =
-    typeof address === 'string' ? address : `http://localhost:${address.port}`;
-});
-
-afterAll(async () => {
-  await app.close();
-});
+const baseUrl = 'https://picsum.photos';
 
 describe('`imgdl()`', () => {
   test('single image download', async () => {
-    const url = `${baseUrl}/images/200x300.webp`;
-    const expectedFilePath = `${process.cwd()}/200x300.webp`;
+    const url = `${baseUrl}/200/300.webp`;
+    const expectedFilePath = `${process.cwd()}/300.webp`;
 
     expect((await imgdl(url)).path).toEqual(expectedFilePath);
     expect(() => fs.accessSync(expectedFilePath)).not.toThrow();
   });
 
   describe('multiple', () => {
-    let testUrls: string[];
-
-    const expectedNames = [
-      '200x300.webp',
-      `${DEFAULT_NAME}.${DEFAULT_EXTENSION}`,
-    ];
-
-    beforeAll(() => {
-      testUrls = [
-        `${baseUrl}/images/200x300.webp`,
-        `${baseUrl}/images/200x300`,
-      ];
-    });
+    const testUrls = [`${baseUrl}/200/300.webp`, `${baseUrl}/200/300`];
+    const expectedNames = ['300.webp', `${DEFAULT_NAME}.${DEFAULT_EXTENSION}`];
 
     test('only array of `url`s', async () => {
       const expectedFilePaths = expectedNames.map(
@@ -64,10 +33,7 @@ describe('`imgdl()`', () => {
     });
 
     test('duplicate `url`s', async () => {
-      const images = await imgdl([
-        `${baseUrl}/images/200x300`,
-        `${baseUrl}/images/200x300`,
-      ]);
+      const images = await imgdl([`${baseUrl}/200/300`, `${baseUrl}/200/300`]);
 
       const expectedFilePaths = [
         `${process.cwd()}/${DEFAULT_NAME}.${DEFAULT_EXTENSION}`,

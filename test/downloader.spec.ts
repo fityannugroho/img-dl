@@ -1,35 +1,15 @@
 import { HTTPError, RequestError } from 'got';
 import fs from 'node:fs';
-import { afterAll, beforeAll, describe, expect, test } from 'vitest';
+import { describe, expect, test } from 'vitest';
 import { DEFAULT_EXTENSION, DEFAULT_NAME } from '~/constanta.js';
 import { download, parseImageParams } from '~/downloader.js';
 import ArgumentError from '~/errors/ArgumentError.js';
 import DirectoryError from '~/errors/DirectoryError.js';
-import { buildFastify } from './fixture/mocks/server.js';
-import { FastifyInstance } from 'fastify';
 
-let app: FastifyInstance;
-let baseUrl: string;
+const baseUrl = 'https://picsum.photos';
 
-beforeAll(async () => {
-  app = buildFastify();
-  await app.listen();
-
-  const address = app.server.address();
-  if (!address) {
-    throw new Error('Server not running');
-  }
-
-  baseUrl =
-    typeof address === 'string' ? address : `http://localhost:${address.port}`;
-});
-
-afterAll(async () => {
-  await app.close();
-});
-
-describe('`parseImageParams()`', () => {
-  const urlTest = `${baseUrl}/images/200x300`;
+describe('parseImageParams', () => {
+  const urlTest = `${baseUrl}/200/300`;
   const defaultExpected = {
     url: urlTest,
     directory: process.cwd(),
@@ -41,16 +21,16 @@ describe('`parseImageParams()`', () => {
   };
 
   test('Only `url` with file ending', () => {
-    const url = `${baseUrl}/200x300.webp`;
+    const url = `${baseUrl}/200/300.webp`;
 
     expect(parseImageParams(url)).toEqual({
       ...defaultExpected,
       url,
-      name: '200x300',
+      name: '300',
       extension: 'webp',
-      originalName: '200x300',
+      originalName: '300',
       originalExtension: 'webp',
-      path: `${defaultExpected.directory}/200x300.webp`,
+      path: `${defaultExpected.directory}/300.webp`,
     });
   });
 
@@ -290,17 +270,17 @@ describe('`parseImageParams()`', () => {
   });
 });
 
-describe('`download()`', () => {
+describe('download', () => {
   test('Only `url`', async () => {
-    const imgTest = parseImageParams(`${baseUrl}/images/200x300.webp`);
-    const expectedFilePath = `${process.cwd()}/200x300.webp`;
+    const imgTest = parseImageParams(`${baseUrl}/200/300.webp`);
+    const expectedFilePath = `${process.cwd()}/300.webp`;
 
     expect((await download(imgTest)).path).toEqual(expectedFilePath);
     expect(() => fs.accessSync(expectedFilePath)).not.toThrow();
   });
 
   test('should throw an error if the directory cannot be created', async () => {
-    const imgTest = parseImageParams(`${baseUrl}/images/200x300`, {
+    const imgTest = parseImageParams(`${baseUrl}/200/300`, {
       directory: '/new-root-dir-no-access',
     });
     await expect(download(imgTest)).rejects.toThrow(DirectoryError);

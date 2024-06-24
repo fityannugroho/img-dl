@@ -1,41 +1,15 @@
 import { $ } from 'execa';
 import fs from 'node:fs';
-import { afterAll, beforeAll, describe, expect, test } from 'vitest';
+import { describe, expect, test } from 'vitest';
 import { DEFAULT_EXTENSION, DEFAULT_NAME } from '~/constanta.js';
-import { FastifyInstance } from 'fastify';
-import { buildFastify } from './fixture/mocks/server.js';
 
-let app: FastifyInstance;
-let baseUrl: string;
-
-beforeAll(async () => {
-  await $`npm run build`;
-
-  app = buildFastify();
-  await app.listen();
-
-  const address = app.server.address();
-  if (!address) {
-    throw new Error('Server not running');
-  }
-
-  baseUrl =
-    typeof address === 'string' ? address : `http://localhost:${address.port}`;
-});
-
-afterAll(async () => {
-  await app.close();
-});
+const baseUrl = 'https://picsum.photos';
 
 describe('cli', () => {
-  let validTestUrl: string;
-
-  beforeAll(() => {
-    validTestUrl = `${baseUrl}/images/200x300.webp`;
-  });
+  const validTestUrl = `${baseUrl}/200/300.webp`;
 
   test('Only URL', async () => {
-    const expectedFilePath = `${process.cwd()}/200x300.webp`;
+    const expectedFilePath = `${process.cwd()}/300.webp`;
     const { stdout } = await $`node dist/cli.js ${validTestUrl}`;
 
     expect(stdout).toMatch('Done!');
@@ -44,7 +18,7 @@ describe('cli', () => {
 
   test('with `--dir` argument', async () => {
     const expectedDirPath = `${process.cwd()}/images`;
-    const expectedFilePath = `${expectedDirPath}/200x300.webp`;
+    const expectedFilePath = `${expectedDirPath}/300.webp`;
     const { stdout } = await $`node dist/cli.js ${validTestUrl} --dir=images`;
 
     try {
@@ -66,7 +40,7 @@ describe('cli', () => {
   });
 
   test('with `--silent` argument', async () => {
-    const expectedFilePath = `${process.cwd()}/200x300.webp`;
+    const expectedFilePath = `${process.cwd()}/300.webp`;
     const { stdout } = await $`node dist/cli.js ${validTestUrl} --silent`;
 
     expect(stdout).toBe('');
@@ -98,18 +72,11 @@ describe('cli', () => {
   });
 
   describe('Multiple URLs', () => {
+    const validTestUrls = [`${baseUrl}/200/300.webp`, `${baseUrl}/200/300`];
     const expectedFilePaths = [
-      `${process.cwd()}/200x300.webp`,
+      `${process.cwd()}/300.webp`,
       `${process.cwd()}/${DEFAULT_NAME}.${DEFAULT_EXTENSION}`,
     ];
-    let validTestUrls: string[];
-
-    beforeAll(() => {
-      validTestUrls = [
-        `${baseUrl}/images/200x300.webp`,
-        `${baseUrl}/images/200x300`,
-      ];
-    });
 
     test('Only URLs', async () => {
       const { stdout } = await $`node dist/cli.js ${validTestUrls}`;
@@ -134,11 +101,7 @@ describe('cli', () => {
   });
 
   describe('Increment download', () => {
-    let testUrl: string;
-
-    beforeAll(() => {
-      testUrl = `${baseUrl}/images/img-{i}.webp`;
-    });
+    const testUrl = `${baseUrl}/200/{i}.webp`;
 
     test('should throw an error if the end index is not specified', async () => {
       await expect(
@@ -160,7 +123,7 @@ describe('cli', () => {
 
     test('should throw an error if the URL does not contain the index placeholder', async () => {
       await expect(
-        $`node dist/cli.js ${baseUrl}/images/200x300.webp --increment --end=10`,
+        $`node dist/cli.js ${baseUrl}/200/300.webp --increment --end=10`,
       ).rejects.toThrow();
     });
 
@@ -169,9 +132,9 @@ describe('cli', () => {
         await $`node dist/cli.js ${testUrl} --increment --start=300 --end=302`;
 
       const expectedFilePaths = [
-        `${process.cwd()}/img-300.webp`,
-        `${process.cwd()}/img-301.webp`,
-        `${process.cwd()}/img-302.webp`,
+        `${process.cwd()}/300.webp`,
+        `${process.cwd()}/301.webp`,
+        `${process.cwd()}/302.webp`,
       ];
 
       expect(stdout).toMatch('Done!');
@@ -182,7 +145,7 @@ describe('cli', () => {
 
     test('Valid without extension in url', async () => {
       const { stdout } =
-        await $`node dist/cli.js ${baseUrl}/images/img-{i} --increment --start=1 --end=3`;
+        await $`node dist/cli.js ${baseUrl}/200/{i} --increment --start=1 --end=3`;
 
       const expectedFilePaths = [
         `${process.cwd()}/${DEFAULT_NAME}.${DEFAULT_EXTENSION}`,

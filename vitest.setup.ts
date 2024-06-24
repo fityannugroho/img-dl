@@ -1,4 +1,4 @@
-import { readdirSync, unlinkSync } from 'node:fs';
+import { readdirSync, rmSync } from 'node:fs';
 import { afterEach } from 'vitest';
 import { imageExtensions } from '~/constanta.js';
 
@@ -7,7 +7,7 @@ afterEach(() => {
   readdirSync(process.cwd()).forEach((file) => {
     const ext = file.split('.').pop();
     if (ext && imageExtensions.has(ext.toLowerCase())) {
-      unlinkSync(file);
+      rmSync(file);
     }
   });
 });
