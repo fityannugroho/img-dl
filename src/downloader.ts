@@ -85,6 +85,9 @@ export function parseImageParams(url: string, options?: ImageOptions) {
     path: '',
   };
 
+  // TODO: Validate the URL
+  // ...
+
   // Validate the directory path syntax and ensure it is a directory without a filename.
   const { base, name: nameFromPath } = path.parse(img.directory);
   if (base !== nameFromPath) {
@@ -155,10 +158,9 @@ export async function download(img: Image, options: DownloadOptions = {}) {
     try {
       fs.mkdirSync(img.directory, { recursive: true });
     } catch (error) {
-      if (error instanceof Error) {
-        throw new DirectoryError(error.message);
-      }
-      throw new DirectoryError(`Failed to create '${img.directory}'`);
+      throw new DirectoryError(
+        (error as Error)?.message ?? `Failed to create '${img.directory}'`,
+      );
     }
   }
 
@@ -190,12 +192,8 @@ export async function download(img: Image, options: DownloadOptions = {}) {
       fetchStream.off('error', onError);
 
       pipeline(fetchStream, fs.createWriteStream(img.path))
-        .then(() => {
-          resolve(img);
-        }) // Return the image data.
-        .catch((error) => {
-          onError(error);
-        });
+        .then(() => resolve(img)) // Return the image data.
+        .catch(onError);
     });
 
     fetchStream.once('error', onError);

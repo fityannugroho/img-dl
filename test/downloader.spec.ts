@@ -1,11 +1,21 @@
-import { HTTPError, RequestError } from 'got';
+import { RequestError } from 'got';
 import fs from 'node:fs';
 import path from 'node:path';
-import { describe, expect, it, test, vi } from 'vitest';
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  describe,
+  expect,
+  it,
+  vi,
+} from 'vitest';
 import { DEFAULT_EXTENSION, DEFAULT_NAME } from '~/constanta.js';
 import { download, parseImageParams } from '~/downloader.js';
 import ArgumentError from '~/errors/ArgumentError.js';
 import DirectoryError from '~/errors/DirectoryError.js';
+import { BASE_URL } from './fixtures/mocks/handlers.js';
+import { server } from './fixtures/mocks/node.js';
 
 describe('parseImageParams', () => {
   it('should set values from URL if no options are provided', () => {
@@ -32,6 +42,10 @@ describe('parseImageParams', () => {
       originalExtension: undefined,
       path: path.resolve(process.cwd(), `${DEFAULT_NAME}.${DEFAULT_EXTENSION}`),
     });
+  });
+
+  it.todo('should throw error if URL is invalid', () => {
+    //
   });
 
   it('should use current working directory if directory is empty', () => {
@@ -196,36 +210,79 @@ describe('parseImageParams', () => {
   });
 });
 
-describe.skip('`download()`', () => {
-  test('Only `url`', async () => {
-    const url = 'https://picsum.photos/200/300.webp';
-    const expectedFilePath = `${process.cwd()}/300.webp`;
+describe('`download`', () => {
+  beforeAll(() => server.listen());
 
-    expect((await download(url)).path).toEqual(expectedFilePath);
-    expect(fs.existsSync(expectedFilePath)).toBe(true); // Ensure the image is actually exists
+  afterEach(() => server.resetHandlers());
 
-    // Cleanup
-    fs.unlinkSync(expectedFilePath);
+  afterAll(() => server.close());
+
+  it('should download an image and save it', async () => {
+    const expectedImage = parseImageParams(`${BASE_URL}/image.jpg`);
+    const image = await download(expectedImage);
+    try {
+      expect(image).toMatchObject(expectedImage);
+      expect(() => fs.accessSync(image.path)).not.toThrow();
+    } finally {
+      fs.rmSync(image.path, { force: true });
+    }
   });
 
-  test('should throw an error if the directory cannot be created', async () => {
-    const url = 'https://picsum.photos/200/300';
-    const directory = '/new-root-dir-no-access';
-    await expect(download(url, { directory })).rejects.toThrow(DirectoryError);
+  it('should throw an error if directory cannot be created', async () => {
+    const directory = '/restricted-dir';
+    const image = parseImageParams(`${BASE_URL}/image.jpg`, { directory });
+    await expect(() => download(image)).rejects.toThrow(DirectoryError);
   });
 
-  test('should throw an error if the URL is invalid', async () => {
-    const url = 'invalid-url';
-    await expect(download(url)).rejects.toThrow(RequestError);
+  it.each(['tmp', 'tmp/images'])(
+    'should create the directory if it does not exist: `%s`',
+    async (directory) => {
+      // Prepare: ensure the directory does not exist
+      fs.rmSync(directory, { recursive: true, force: true });
+
+      const image = parseImageParams(`${BASE_URL}/image.jpg`, { directory });
+      const { path: actualPath } = await download(image);
+
+      try {
+        // Check if the directory was created
+        expect(fs.existsSync(directory)).toBe(true);
+        // Check if the file was created
+        expect(() => fs.accessSync(actualPath)).not.toThrow();
+      } finally {
+        fs.rmSync(directory, { recursive: true, force: true });
+      }
+    },
+  );
+
+  it('should throw an error if the response is not an image', async () => {
+    await expect(
+      // `GET /` will return a 200 OK response with `OK` body
+      () => download(parseImageParams(BASE_URL)),
+    ).rejects.toThrow(RequestError);
   });
 
-  test('should throw an error if the response is unsuccessful', async () => {
-    const url = 'https://picsum.photos/xxx';
-    await expect(download(url)).rejects.toThrow(HTTPError);
+  it('should throw an error if the response is unsuccessful', async () => {
+    const url = `${BASE_URL}/unknown`;
+
+    await expect(
+      // `GET /unknown` will return a 404 Not Found response
+      () => download(parseImageParams(url)),
+    ).rejects.toThrow(RequestError);
   });
 
-  test('should throw an error if the response is not an image', async () => {
-    const url = 'https://picsum.photos';
-    await expect(download(url)).rejects.toThrow(RequestError);
+  it('should throw an error if failed to save the image (failed to create write stream)', async () => {
+    const image = parseImageParams(`${BASE_URL}/image.jpg`);
+    const writeStreamSpyOn = vi.spyOn(fs, 'createWriteStream');
+
+    // @ts-expect-error: missing another method implementations
+    writeStreamSpyOn.mockImplementationOnce(() => {
+      return {
+        write: () => {
+          throw new Error('Failed to save the image');
+        },
+      };
+    });
+
+    await expect(() => download(image)).rejects.toThrow(Error);
   });
 });
