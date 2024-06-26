@@ -44,8 +44,14 @@ describe('parseImageParams', () => {
     });
   });
 
-  it.todo('should throw error if URL is invalid', () => {
-    //
+  it.each([
+    'not-url',
+    'some/path',
+    'example.com/image.jpg',
+    'ftp://example.com',
+    'ws://example.com',
+  ])('should throw error if URL is invalid: `%s`', (url) => {
+    expect(() => parseImageParams(url)).toThrow(ArgumentError);
   });
 
   it('should use current working directory if directory is empty', () => {
@@ -270,7 +276,7 @@ describe('`download`', () => {
     ).rejects.toThrow(RequestError);
   });
 
-  it('should throw an error if failed to save the image (failed to create write stream)', async () => {
+  it('should throw an error if failed to save the image (because of createWriteStream error)', async () => {
     const image = parseImageParams(`${BASE_URL}/image.jpg`);
     const writeStreamSpyOn = vi.spyOn(fs, 'createWriteStream');
 

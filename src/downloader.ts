@@ -70,23 +70,34 @@ export type DownloadOptions = {
  * @throws {ArgumentError} If there is an invalid value.
  */
 export function parseImageParams(url: string, options?: ImageOptions) {
+  let validUrl: URL;
+
+  try {
+    validUrl = new URL(url);
+  } catch (error) {
+    throw new ArgumentError('Invalid URL');
+  }
+
+  if (!['http:', 'https:'].includes(validUrl.protocol)) {
+    throw new ArgumentError('URL protocol must be http or https');
+  }
+
   const lowerImgExts = [...imageExtensions].map((ext) => ext.toLowerCase());
   const originalExt = path.extname(url).replace('.', '');
   const img: Image = {
-    url,
+    url, // TODO: return `URL` object instead of string
     name: '',
     extension: '',
     directory: options?.directory
       ? path.normalize(options.directory)
       : process.cwd(),
     originalName:
-      originalExt === '' ? undefined : path.basename(url, `.${originalExt}`),
+      originalExt === ''
+        ? undefined
+        : path.basename(validUrl.pathname, `.${originalExt}`),
     originalExtension: originalExt === '' ? undefined : originalExt,
     path: '',
   };
-
-  // TODO: Validate the URL
-  // ...
 
   // Validate the directory path syntax and ensure it is a directory without a filename.
   const { base, name: nameFromPath } = path.parse(img.directory);
