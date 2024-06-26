@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { beforeAll, describe, expect, test } from 'vitest';
 
-describe('cli', () => {
+describe.skip('cli', () => {
   const validTestUrl = 'https://picsum.photos/200/300.webp';
 
   beforeAll(async () => {

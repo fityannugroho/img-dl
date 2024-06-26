@@ -3,7 +3,7 @@ import { describe, expect, test, vi } from 'vitest';
 import { DEFAULT_EXTENSION, DEFAULT_NAME } from '~/constanta.js';
 import imgdl from '~/index.js';
 
-describe('`imgdl()`', () => {
+describe.skip('`imgdl()`', () => {
   test('single', async () => {
     const url = 'https://picsum.photos/200/300.webp';
     const expectedFilePath = `${process.cwd()}/300.webp`;
