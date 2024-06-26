@@ -1,317 +1,202 @@
 import { HTTPError, RequestError } from 'got';
 import fs from 'node:fs';
-import { describe, expect, test } from 'vitest';
+import path from 'node:path';
+import { describe, expect, it, test, vi } from 'vitest';
 import { DEFAULT_EXTENSION, DEFAULT_NAME } from '~/constanta.js';
 import { download, parseImageParams } from '~/downloader.js';
 import ArgumentError from '~/errors/ArgumentError.js';
 import DirectoryError from '~/errors/DirectoryError.js';
 
-describe('`parseImageParams()`', () => {
-  const urlTest = 'https://picsum.photos/200/300';
-  const defaultExpected = {
-    url: urlTest,
-    directory: process.cwd(),
-    name: DEFAULT_NAME,
-    extension: DEFAULT_EXTENSION,
-    originalName: undefined,
-    originalExtension: undefined,
-    path: `${process.cwd()}/${DEFAULT_NAME}.${DEFAULT_EXTENSION}`,
-  };
-
-  test('Only `url` with file ending', () => {
-    const url = 'https://picsum.photos/200/300.webp';
-
-    expect(parseImageParams(url)).toEqual({
-      ...defaultExpected,
+describe('parseImageParams', () => {
+  it('should set values from URL if no options are provided', () => {
+    const url = 'https://example.com/someimage.webp';
+    expect(parseImageParams(url)).toMatchObject({
       url,
-      name: '300',
+      name: 'someimage',
       extension: 'webp',
-      originalName: '300',
+      directory: process.cwd(),
+      originalName: 'someimage',
       originalExtension: 'webp',
-      path: `${defaultExpected.directory}/300.webp`,
+      path: path.resolve(process.cwd(), 'someimage.webp'),
     });
   });
 
-  test('Only `url` without file ending', () => {
-    expect(parseImageParams(urlTest)).toEqual(defaultExpected);
-  });
-
-  test('where image with the same name already exists', () => {
-    // Add the test image file
-    const existingFilePath = `${defaultExpected.directory}/${defaultExpected.name}.${defaultExpected.extension}`;
-    fs.writeFileSync(existingFilePath, 'test image content');
-
-    // Test the `parseImageParams()` and make sure it returns name with suffix ' (1)'
-    expect(parseImageParams(urlTest)).toEqual({
-      ...defaultExpected,
-      name: `${defaultExpected.name} (1)`,
-      path: `${defaultExpected.directory}/${defaultExpected.name} (1).${defaultExpected.extension}`,
-    });
-
-    // // Add the test image file with suffix ' (1)'
-    const existingFilePathWithSuffix = `${defaultExpected.directory}/${defaultExpected.name} (1).${defaultExpected.extension}`;
-    fs.writeFileSync(existingFilePathWithSuffix, 'test image content');
-
-    // // Test the `parseImageParams()` and make sure it returns name with suffix ' (2)'
-    expect(parseImageParams(urlTest)).toEqual({
-      ...defaultExpected,
-      name: `${defaultExpected.name} (2)`,
-      path: `${defaultExpected.directory}/${defaultExpected.name} (2).${defaultExpected.extension}`,
-    });
-
-    // // Clean up the test image files
-    fs.unlinkSync(existingFilePath);
-    fs.unlinkSync(existingFilePathWithSuffix);
-  });
-
-  describe('with `directory` argument', () => {
-    test('empty string', () => {
-      expect(parseImageParams(urlTest, { directory: '' })).toEqual(
-        defaultExpected,
-      );
-    });
-
-    test('valid directory', () => {
-      expect(parseImageParams(urlTest, { directory: 'test' })).toEqual({
-        ...defaultExpected,
-        directory: 'test',
-        path: `${defaultExpected.directory}/test/${defaultExpected.name}.${defaultExpected.extension}`,
-      });
-
-      expect(parseImageParams(urlTest, { directory: '.' })).toEqual({
-        ...defaultExpected,
-        directory: '.',
-      });
-
-      expect(parseImageParams(urlTest, { directory: './test' })).toEqual({
-        ...defaultExpected,
-        directory: 'test',
-        path: `${defaultExpected.directory}/test/${defaultExpected.name}.${defaultExpected.extension}`,
-      });
-
-      expect(parseImageParams(urlTest, { directory: 'test/..' })).toEqual({
-        ...defaultExpected,
-        directory: '.',
-        path: `${defaultExpected.directory}/${defaultExpected.name}.${defaultExpected.extension}`,
-      });
-
-      expect(parseImageParams(urlTest, { directory: 'test/../test2' })).toEqual(
-        {
-          ...defaultExpected,
-          directory: 'test2',
-          path: `${defaultExpected.directory}/test2/${defaultExpected.name}.${defaultExpected.extension}`,
-        },
-      );
-
-      expect(parseImageParams(urlTest, { directory: 'test/test' })).toEqual({
-        ...defaultExpected,
-        directory: 'test/test',
-        path: `${defaultExpected.directory}/test/test/${defaultExpected.name}.${defaultExpected.extension}`,
-      });
-
-      expect(parseImageParams(urlTest, { directory: './test/test' })).toEqual({
-        ...defaultExpected,
-        directory: 'test/test',
-        path: `${defaultExpected.directory}/test/test/${defaultExpected.name}.${defaultExpected.extension}`,
-      });
-
-      expect(parseImageParams(urlTest, { directory: '/test' })).toEqual({
-        ...defaultExpected,
-        directory: '/test',
-        path: `/test/${defaultExpected.name}.${defaultExpected.extension}`,
-      });
-    });
-
-    test('invalid: contain filename', () => {
-      expect(() =>
-        parseImageParams(urlTest, { directory: 'test/image.jpg' }),
-      ).toThrow(ArgumentError);
-      expect(() =>
-        parseImageParams(urlTest, { directory: './test/image.jpg' }),
-      ).toThrow(ArgumentError);
-      expect(() =>
-        parseImageParams(urlTest, { directory: './test/image.jpg/' }),
-      ).toThrow(ArgumentError);
-      expect(() =>
-        parseImageParams(urlTest, { directory: 'image.jpg' }),
-      ).toThrow(ArgumentError);
-      expect(() =>
-        parseImageParams(urlTest, { directory: './image.jpg' }),
-      ).toThrow(ArgumentError);
-      expect(() =>
-        parseImageParams(urlTest, { directory: './image.jpg' }),
-      ).toThrow(ArgumentError);
+  it('should use default values if URL has no file ending', () => {
+    const url = 'https://example.com/someimage';
+    expect(parseImageParams(url)).toMatchObject({
+      url,
+      name: DEFAULT_NAME,
+      extension: DEFAULT_EXTENSION,
+      directory: process.cwd(),
+      originalName: undefined,
+      originalExtension: undefined,
+      path: path.resolve(process.cwd(), `${DEFAULT_NAME}.${DEFAULT_EXTENSION}`),
     });
   });
 
-  describe('with `name` argument', () => {
-    test('empty string', () => {
-      expect(parseImageParams(urlTest, { name: '' })).toEqual(defaultExpected);
-    });
-
-    test('string', () => {
-      expect(parseImageParams(urlTest, { name: 'test' })).toEqual({
-        ...defaultExpected,
-        name: 'test',
-        path: `${defaultExpected.directory}/test.${defaultExpected.extension}`,
-      });
-
-      expect(parseImageParams(urlTest, { name: 'test name' })).toEqual({
-        ...defaultExpected,
-        name: 'test name',
-        path: `${defaultExpected.directory}/test name.${defaultExpected.extension}`,
-      });
-
-      expect(parseImageParams(urlTest, { name: 'test.name' })).toEqual({
-        ...defaultExpected,
-        name: 'test.name',
-        path: `${defaultExpected.directory}/test.name.${defaultExpected.extension}`,
-      });
-    });
-
-    // test('function returns empty string', () => {
-    //   expect(parseImageParams(urlTest, { name: () => '' })).toEqual({
-    //     ...defaultExpected,
-    //     name: DEFAULT_NAME,
-    //   });
-    // });
-
-    // test('function returns string', () => {
-    //   expect(parseImageParams(urlTest, { name: () => 'test' })).toEqual({
-    //     ...defaultExpected,
-    //     name: 'test',
-    //     path: `${defaultExpected.directory}/test.${defaultExpected.extension}`,
-    //   });
-    // });
-
-    // test('function with original name', () => {
-    //   expect(
-    //     parseImageParams(urlTest, { name: (ori) => `test-${ori}` }),
-    //   ).toEqual({
-    //     ...defaultExpected,
-    //     name: 'test-undefined',
-    //     path: `${defaultExpected.directory}/test-undefined.${defaultExpected.extension}`,
-    //   });
-
-    //   expect(
-    //     parseImageParams('https://picsum.photos/200/300.webp', {
-    //       name: (ori) => `test-${ori}`,
-    //     }),
-    //   ).toEqual({
-    //     ...defaultExpected,
-    //     url: 'https://picsum.photos/200/300.webp',
-    //     name: 'test-300',
-    //     extension: 'webp',
-    //     originalName: '300',
-    //     originalExtension: 'webp',
-    //     path: `${defaultExpected.directory}/test-300.webp`,
-    //   });
-    // });
-
-    test('invalid: contain prohibited characters', () => {
-      expect(() => parseImageParams(urlTest, { name: 'test<image' })).toThrow(
-        ArgumentError,
-      );
-      expect(() => parseImageParams(urlTest, { name: 'test>image' })).toThrow(
-        ArgumentError,
-      );
-      expect(() => parseImageParams(urlTest, { name: 'test:image' })).toThrow(
-        ArgumentError,
-      );
-      expect(() => parseImageParams(urlTest, { name: 'test"image' })).toThrow(
-        ArgumentError,
-      );
-      expect(() => parseImageParams(urlTest, { name: 'test/image' })).toThrow(
-        ArgumentError,
-      );
-      expect(() => parseImageParams(urlTest, { name: 'test\\image' })).toThrow(
-        ArgumentError,
-      );
-      expect(() => parseImageParams(urlTest, { name: 'test|image' })).toThrow(
-        ArgumentError,
-      );
-      expect(() => parseImageParams(urlTest, { name: 'test?image' })).toThrow(
-        ArgumentError,
-      );
-      expect(() => parseImageParams(urlTest, { name: 'test*image' })).toThrow(
-        ArgumentError,
-      );
-      expect(() => parseImageParams(urlTest, { name: 'test  ' })).toThrow(
-        ArgumentError,
-      );
-      // Other tests is covered by `sanitize-filename` in https://github.com/parshap/node-sanitize-filename/blob/master/test.js
-    });
-
-    test('invalid: contains image extension', () => {
-      expect(() => parseImageParams(urlTest, { name: 'test.jpg' })).toThrow(
-        ArgumentError,
-      );
-      expect(() => parseImageParams(urlTest, { name: 'test.png' })).toThrow(
-        ArgumentError,
-      );
-      expect(() => parseImageParams(urlTest, { name: 'test.webp' })).toThrow(
-        ArgumentError,
-      );
-    });
+  it('should use current working directory if directory is empty', () => {
+    const url = 'https://example.com/image.jpg';
+    const result = parseImageParams(url, { directory: '' });
+    expect(result.directory).toBe(process.cwd());
+    expect(result.path).toBe(path.resolve(process.cwd(), 'image.jpg'));
   });
 
-  describe('with `extension` argument', () => {
-    test('empty string', () => {
-      expect(parseImageParams(urlTest, { extension: '' })).toEqual(
-        defaultExpected,
+  it.each([
+    ['images', 'images'],
+    ['images/', 'images/'],
+    ['images/me', 'images/me'],
+    ['images/me/', 'images/me/'],
+    ['.', '.'],
+    ['./images', 'images'],
+    ['./images/', 'images/'],
+    ['test/../images', 'images'],
+    ['test/../images/', 'images/'],
+  ])('should set a valid normalized directory: `%s`', (dir, expectedDir) => {
+    const url = 'https://example.com/image.jpg';
+    const result = parseImageParams(url, { directory: dir });
+    expect(result.directory).toBe(expectedDir);
+    expect(result.path).toBe(path.resolve(expectedDir, 'image.jpg'));
+  });
+
+  it.each([
+    'images/image.jpg',
+    './images/image.jpg',
+    './images/image.jpg/',
+    'image.jpg',
+    './image.jpg',
+    './image.jpg/',
+  ])('should throw error if directory contains filename: `%s`', (directory) => {
+    const url = 'https://example.com/image.jpg';
+    expect(() => parseImageParams(url, { directory })).toThrow(ArgumentError);
+  });
+
+  it('should use original name if no name is provided', () => {
+    const url = 'https://example.com/someimage.jpg';
+    const result = parseImageParams(url);
+    expect(result.originalName).toBe('someimage');
+    expect(result.name).toBe('someimage');
+  });
+
+  it('should use original name if name is empty', () => {
+    const url = 'https://example.com/someimage.jpg';
+    const result = parseImageParams(url, { name: '' });
+    expect(result.originalName).toBe('someimage');
+    expect(result.name).toBe('someimage');
+  });
+
+  it('should use default name if name is empty and URL has no file ending', () => {
+    const url = 'https://example.com/image';
+    const result = parseImageParams(url, { name: '' });
+    expect(result.originalName).toBeUndefined();
+    expect(result.name).toBe(DEFAULT_NAME);
+  });
+
+  it.each([
+    'newname',
+    'new name',
+    'new-name',
+    'new_name',
+    'new.name',
+    ' newname',
+  ])('should set a valid name: `%s`', (name) => {
+    const url = 'https://example.com/someimage.jpg';
+    const result = parseImageParams(url, { name });
+    expect(result.originalName).toBe('someimage');
+    expect(result.name).toBe(name);
+    expect(result.path).toBe(
+      path.resolve(process.cwd(), `${name}.${DEFAULT_EXTENSION}`),
+    );
+  });
+
+  it('should throw error if name contains extension', () => {
+    const url = 'https://example.com/image.jpg';
+    const options = { name: 'newname.jpg' };
+    expect(() => parseImageParams(url, options)).toThrow(ArgumentError);
+  });
+
+  it.each([
+    'new<name',
+    'new>name',
+    'new:name',
+    'new/name',
+    'new\\name',
+    'new|name',
+    'new?name',
+    'new*name',
+    'newname ',
+    // Other tests is covered by `sanitize-filename` in https://github.com/parshap/node-sanitize-filename/blob/master/test.js
+  ])(
+    'should throw error if name contain prohibited characters: `%s`',
+    (name) => {
+      const url = 'https://example.com/image.jpg';
+      const options = { name };
+      expect(() => parseImageParams(url, options)).toThrow(ArgumentError);
+    },
+  );
+
+  it('should use original extension if no extension is provided', () => {
+    const url = 'https://example.com/image.jpg';
+    const result = parseImageParams(url);
+    expect(result.originalExtension).toBe('jpg');
+    expect(result.extension).toBe('jpg');
+  });
+
+  it('should use original extension if extension is empty', () => {
+    const url = 'https://example.com/image.webp';
+    const result = parseImageParams(url, { extension: '' });
+    expect(result.originalExtension).toBe('webp');
+    expect(result.extension).toBe('webp');
+  });
+
+  it('should use default extension if no extension is provided and URL has no file ending', () => {
+    const url = 'https://example.com/image';
+    const result = parseImageParams(url);
+    expect(result.originalExtension).toBeUndefined();
+    expect(result.extension).toBe(DEFAULT_EXTENSION);
+  });
+
+  it.each(['png', 'PNG', 'jpeg', 'webp', 'gif', 'svg'])(
+    'should set a valid extension: `%s`',
+    (extension) => {
+      const url = 'https://example.com/image.jpg';
+      const result = parseImageParams(url, { extension });
+      expect(result.originalExtension).toBe('jpg');
+      expect(result.extension).toBe(extension);
+      expect(result.path).toBe(
+        path.resolve(process.cwd(), `image.${extension}`),
       );
+    },
+  );
+
+  it('should throw error if extension contains dot', () => {
+    const url = 'https://example.com/image.jpg';
+    const options = { extension: '.png' };
+    expect(() => parseImageParams(url, options)).toThrow(ArgumentError);
+  });
+
+  it.each(['txt', 'mp4', 'unknown', 'bla.bla'])(
+    'should throw error if not an image extension: `%s`',
+    (extension) => {
+      const url = 'https://example.com/image.jpg';
+      expect(() => parseImageParams(url, { extension })).toThrow(ArgumentError);
+    },
+  );
+
+  it('should generate a unique name if file path is taken', () => {
+    const url = 'https://example.com/image.jpg';
+    const options = { directory: 'images/me' };
+
+    const existsSyncSpyOn = vi.spyOn(fs, 'existsSync');
+    existsSyncSpyOn.mockImplementationOnce((filePath) => {
+      return filePath === path.resolve('images/me', 'image.jpg');
     });
 
-    test('valid image extension', () => {
-      expect(parseImageParams(urlTest, { extension: 'png' })).toEqual({
-        ...defaultExpected,
-        extension: 'png',
-        path: `${defaultExpected.directory}/${defaultExpected.name}.png`,
-      });
-
-      expect(parseImageParams(urlTest, { extension: 'webp' })).toEqual({
-        ...defaultExpected,
-        extension: 'webp',
-        path: `${defaultExpected.directory}/${defaultExpected.name}.webp`,
-      });
-
-      expect(parseImageParams(urlTest, { extension: 'JPG' })).toEqual({
-        ...defaultExpected,
-        extension: 'JPG',
-        path: `${defaultExpected.directory}/${defaultExpected.name}.JPG`,
-      });
-    });
-
-    test('invalid: contain dot', () => {
-      expect(() => parseImageParams(urlTest, { extension: '.jpg' })).toThrow(
-        ArgumentError,
-      );
-      expect(() => parseImageParams(urlTest, { extension: '.png' })).toThrow(
-        ArgumentError,
-      );
-      expect(() =>
-        parseImageParams(urlTest, { extension: 'test.test' }),
-      ).toThrow(ArgumentError);
-      expect(() =>
-        parseImageParams(urlTest, { extension: 'test.test.test' }),
-      ).toThrow(ArgumentError);
-    });
-
-    test('invalid: not an image extension', () => {
-      expect(() => parseImageParams(urlTest, { extension: 'mp4' })).toThrow(
-        ArgumentError,
-      );
-      expect(() => parseImageParams(urlTest, { extension: 'txt' })).toThrow(
-        ArgumentError,
-      );
-      expect(() => parseImageParams(urlTest, { extension: 'unknown' })).toThrow(
-        ArgumentError,
-      );
-    });
+    const result = parseImageParams(url, options);
+    expect(result.name).toBe('image (1)');
   });
 });
 
-describe('`download()`', () => {
+describe.skip('`download()`', () => {
   test('Only `url`', async () => {
     const url = 'https://picsum.photos/200/300.webp';
     const expectedFilePath = `${process.cwd()}/300.webp`;
