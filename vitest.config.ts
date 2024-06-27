@@ -5,11 +5,10 @@ export default defineConfig({
   test: {
     root: './',
     alias: {
-      '~': path.resolve(__dirname, './src'),
+      '~': path.resolve(import.meta.dirname, './src'),
     },
     coverage: {
       provider: 'v8',
     },
-    testTimeout: 30000,
   },
 });

@@ -1,16 +1,45 @@
 # img-dl
 
-Downloade image(s), by command or programmatically. The alternative for `image-downloader` package (see the [comparison](#comparison)).
+Downloade image(s), by command or programmatically. The alternative for `image-downloader` package (see the [features](#features)).
 
 [![MIT license](https://img.shields.io/github/license/fityannugroho/img-dl.svg)](https://github.com/fityannugroho/img-dl/blob/main/LICENSE)
 [![npm version](https://img.shields.io/npm/v/img-dl.svg)](https://www.npmjs.com/package/img-dl)
 [![npm downloads](https://img.shields.io/npm/dm/img-dl.svg)](https://www.npmjs.com/package/img-dl)
 [![install size](https://packagephobia.com/badge?p=img-dl)](https://packagephobia.com/result?p=img-dl)
 
+## Features
+
+| Features                    | **img-dl** | [image-downloader][p1] |
+| --------------------------- | :--------: | :--------------------: |
+| Single download             |     ✅     |           ✅           |
+| Bulk download               |     ✅     |           ❌           |
+| CLI                         |     ✅     |           ❌           |
+| Custom filename             |     ✅     |           ✅           |
+| Custom extension            |     ✅     |           ❌           |
+| Request timeout             |     ✅     |           ✅           |
+| Retry failed request        |     ✅     |           ❌           |
+| Abort request               |     ✅     |           ❌           |
+| **Increment mode (in CLI)** |     ✅     |           ❌           |
+| **Overwrite prevention**    |     ✅     |           ❌           |
+
+### Increment mode
+
+Download images with an url that contains `{i}` placeholder for the index, and specify the start and end index.
+
+### Overwrite prevention
+
+To prevent overwriting, ` (n)` will be appended to the name of the new file if the file with the same name already exists.
+
+The number will be incremented until the file name is unique in the directory, starting from 1 (e.g. `image (1).jpg`, `image (2).jpg`, etc.).
+
+Image with different extension will be considered as **different** file, so it will not be appended with ` (n)`. For example, `image.jpg` and `image.png` will not be considered as the same file.
+
+> This feature will work for both single and bulk download.
+
 ## Prerequisites
 
-- Node.js 18 or later
-- npm 9 or later
+- Node.js 20.9 or later
+- npm 10 or later
 
 ## Installation
 
@@ -43,7 +72,7 @@ USAGE
 PARAMETERS
   url   The URL of the image to download. Provide multiple URLs to download multiple images.
         In increment mode, the URL must contain {i} placeholder for the index,
-        only one URL is allowed, and the 'end' flag is required.
+        only one URL is allowed, and the '--end' is required.
 
 OPTIONS
   -d, --dir=<path>          The output directory. Default: current working directory
@@ -53,7 +82,7 @@ OPTIONS
   -H, --header=<header>     The header to send with the request. Can be used multiple times
   -i, --increment           Enable increment mode. Default: false
       --interval=<number>   The interval between each batch of requests in milliseconds
-  -n, --name=<filename>     The filename. Default: original filename or timestamp
+  -n, --name=<filename>     The filename. If not specified, the original filename will be used. Default: 'image'
       --max-retry=<number>  Set the maximum number of times to retry the request if it fails
       --silent              Disable logging
       --start=<number>      The start index for increment mode. Default: 0
@@ -76,13 +105,13 @@ EXAMPLES
 imgdl https://example.com/image.jpg
 ```
 
-#### Download multiple images
+#### Bulk download
 
 ```bash
 imgdl https://example.com/image.jpg https://example.com/image2.jpg
 ```
 
-#### Download multiple images with increment mode
+#### Bulk download with increment mode
 
 ```bash
 imgdl https://example.com/image-{i}.jpg --increment --start=1 --end=10
@@ -110,7 +139,7 @@ console.log(image);
 */
 ```
 
-#### Download multiple images
+#### Bulk download
 
 ```js
 import imgdl from 'img-dl';
@@ -172,7 +201,7 @@ The interval between each batch of requests in milliseconds when downloading mul
 Type: `string`<br>
 Default: `'image'`
 
-The filename. If not specified, the original filename will be used. If the original filename is not available, 'image' will be used. <br>When downloading multiple images, `-index` will be appended to the end of the name (suffix). `index` will start from 1. For example: 'image-1'
+The filename. If not specified, the original filename will be used. If the original filename is not available, 'image' will be used.
 
 ##### `maxRetry`
 
@@ -216,20 +245,6 @@ Default: `undefined`
 
 Set timeout for each request in milliseconds.
 
-## Comparison
-
-| Features                 | **img-dl** | [image-downloader][p1] |
-| ------------------------ | :--------: | :--------------------: |
-| Download single image    |     ✅     |           ✅           |
-| Download multiple images |     ✅     |           ❌           |
-| CLI                      |     ✅     |           ❌           |
-| Increment download       |     ✅     |           ❌           |
-| Custom filename          |     ✅     |           ✅           |
-| Custom extension         |     ✅     |           ❌           |
-| Request timeout          |     ✅     |           ✅           |
-| Retry failed request     |     ✅     |           ❌           |
-| Abort request            |     ✅     |           ❌           |
-
 <!-- Project links -->
 
 [p1]: https://www.npmjs.com/package/image-downloader
@@ -238,4 +253,4 @@ Set timeout for each request in milliseconds.
 
 Give a ⭐️ if this project helped you!
 
-You can support this project by donating via [GitHub Sponsors](https://github.com/sponsors/fityannugroho), [Trakteer](https://trakteer.id/fityannugroho/tip), or [Saweria](https://saweria.co/fityannugroho).
+Also please consider supporting this project with a **donation**. Your donation will help us maintain and develop this project and provide you with better support.

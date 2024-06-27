@@ -38,7 +38,7 @@ export const handlers = [
       }
     }
 
-    const imagePath = path.resolve(__dirname, '..', imageName);
+    const imagePath = path.resolve(import.meta.dirname, '..', imageName);
 
     // Return 404 if the image path doesn't exist.
     if (!fs.existsSync(imagePath)) {
