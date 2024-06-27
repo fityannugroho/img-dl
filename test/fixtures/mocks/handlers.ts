@@ -2,7 +2,7 @@ import fs from 'fs';
 import { http, HttpResponse } from 'msw';
 import path from 'path';
 
-const DEFAULT_IMAGE_NAME = '200x300';
+const DEFAULT_IMAGE_NAME = 'image';
 const DEFAULT_IMAGE_EXTENSION = 'jpg';
 
 export const BASE_URL = 'https://example.com';
@@ -18,8 +18,6 @@ export const handlers = [
     if (typeof imageName !== 'string') {
       imageName = imageName[0];
     }
-
-    imageName = path.basename(imageName);
 
     // Use DEFAULT_IMAGE_NAME if the image name begins with 'img-' followed by a number.
     // either with or without an extension. For example, 'img-1', 'img-1.jpg', 'img-20.webp' are valid.

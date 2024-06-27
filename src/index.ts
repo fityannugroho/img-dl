@@ -105,8 +105,8 @@ async function imgdl(
       const images: Image[] = [];
       const countNames = new Map<string, number>();
 
-      url.forEach((u) => {
-        const img = parseImageParams(u, options);
+      url.forEach((_url) => {
+        const img = parseImageParams(_url, options);
 
         // Make sure the name is unique
         const nameKey = `${img.name}.${img.extension}`;
@@ -130,11 +130,13 @@ async function imgdl(
                   signal,
                 });
               } catch (error) {
-                if (error instanceof Error) {
-                  options?.onError?.(error, u);
-                  return undefined;
-                }
-                throw error;
+                options?.onError?.(
+                  error instanceof Error
+                    ? error
+                    : new Error('Unknown error', { cause: error }),
+                  _url,
+                );
+                return undefined;
               }
             },
             { signal: options?.signal },
@@ -164,6 +166,7 @@ async function imgdl(
     });
   }
 
+  // TODO: implement `onSuccess` and `onError` for single download
   return download(parseImageParams(url, options), {
     ...options,
     signal: options?.signal,

@@ -1,106 +1,189 @@
-import fs from 'node:fs';
-import { describe, expect, test, vi } from 'vitest';
-import { DEFAULT_EXTENSION, DEFAULT_NAME } from '~/constanta.js';
-import imgdl from '~/index.js';
+import fs from 'node:fs/promises';
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  describe,
+  expect,
+  it,
+  vi,
+} from 'vitest';
+import imgdl, { Options } from '~/index.js';
+import { server } from './fixtures/mocks/node.js';
+import { BASE_URL } from './fixtures/mocks/handlers.js';
+import * as downloader from '~/downloader.js';
+import path from 'node:path';
 
-describe.skip('`imgdl()`', () => {
-  test('single', async () => {
-    const url = 'https://picsum.photos/200/300.webp';
-    const expectedFilePath = `${process.cwd()}/300.webp`;
+type OnError = Exclude<Options['onError'], undefined>;
 
-    expect((await imgdl(url)).path).toEqual(expectedFilePath);
-    expect(fs.existsSync(expectedFilePath)).toBe(true); // Ensure the image is actually exists
+describe('`imgdl`', () => {
+  /**
+   * The directory to save the downloaded images.
+   */
+  const directory = 'test/tmp';
 
-    // Cleanup
-    fs.unlinkSync(expectedFilePath);
+  beforeAll(() => server.listen());
+
+  afterEach(async () => {
+    server.resetHandlers();
+
+    // Clean up downloaded images
+    await fs.rm(directory, { force: true, recursive: true });
   });
 
-  describe('multiple', () => {
-    const testUrls = [
-      'https://picsum.photos/200/300.webp',
-      'https://picsum.photos/200/300',
-    ];
-    const expectedNames = ['300.webp', `${DEFAULT_NAME}.${DEFAULT_EXTENSION}`];
+  afterAll(() => server.close());
 
-    test('only array of `url`s', async () => {
-      const expectedFilePaths = expectedNames.map(
-        (n) => `${process.cwd()}/${n}`,
-      );
-      const images = await imgdl(testUrls);
+  it('should download an image if single URL is provided', async () => {
+    const url = `${BASE_URL}/image.jpg`;
+    const image = await imgdl(url, { directory });
 
-      expect(images.map((img) => img.path).sort()).toEqual(
-        expectedFilePaths.sort(),
-      );
-      expectedFilePaths.forEach((filepath) => {
-        expect(fs.existsSync(filepath)).toBe(true); // Ensure the image is actually exists
-        fs.unlinkSync(filepath); // Cleanup
-      });
+    expect(image).toStrictEqual({
+      url,
+      name: 'image',
+      extension: 'jpg',
+      directory,
+      originalName: 'image',
+      originalExtension: 'jpg',
+      path: path.resolve(directory, 'image.jpg'),
     });
+    await expect(fs.access(image.path)).resolves.not.toThrow();
+  });
 
-    test('with `directory` argument', async () => {
-      const directory = 'test/tmp';
-      const expectedFilePaths = expectedNames.map(
-        (n) => `${process.cwd()}/${directory}/${n}`,
-      );
-      const images = await imgdl(testUrls, { directory });
+  it('should download an image if single URL is provided with options', async () => {
+    const parseImageParamsSpy = vi.spyOn(downloader, 'parseImageParams');
+    const url = `${BASE_URL}/image.jpg`;
+    const options = {
+      directory: directory + '/images',
+      extension: 'png',
+      name: 'myimage',
+    };
+    const image = await imgdl(url, options);
 
-      expect(images.map((img) => img.path).sort()).toEqual(
-        expectedFilePaths.sort(),
-      );
-      expectedFilePaths.forEach((filepath) => {
-        expect(fs.existsSync(filepath)).toBe(true); // Ensure the image is actually exists
-        fs.unlinkSync(filepath); // Cleanup
-      });
+    expect(parseImageParamsSpy).toHaveBeenCalledOnce();
+    expect(parseImageParamsSpy).toHaveBeenCalledWith(url, options);
+    expect(image).toStrictEqual({
+      ...options,
+      url,
+      originalName: 'image',
+      originalExtension: 'jpg',
+      path: path.resolve(options.directory, 'myimage.png'),
     });
+    await expect(fs.access(image.path)).resolves.not.toThrow();
+  });
 
-    test('with `name` argument', async () => {
-      const expectedFilePaths = [
-        'asset.webp',
-        `asset.${DEFAULT_EXTENSION}`,
-      ].map((n) => `${process.cwd()}/${n}`);
-      const images = await imgdl(testUrls, { name: 'asset' });
+  // Update the `imgdl` function first before activate this test!
+  it.todo(
+    'should not throw any error if URL is invalid, call onError instead',
+    async () => {
+      const url = `${BASE_URL}/unknown`;
+      const onError = vi.fn<Parameters<OnError>>();
 
-      expect(images.map((img) => img.path).sort()).toEqual(
-        expectedFilePaths.sort(),
-      );
-      expectedFilePaths.forEach((filepath) => {
-        expect(fs.existsSync(filepath)).toBe(true); // Ensure the image is actually exists
-        fs.unlinkSync(filepath); // Cleanup
+      await expect(imgdl(url, { onError })).resolves.not.toThrow();
+      expect(onError).toHaveBeenCalledTimes(1);
+    },
+  );
+
+  it('should download multiple images if array of URLs is provided', async () => {
+    const urls = [`${BASE_URL}/img-1.jpg`, `${BASE_URL}/img-2.jpg`];
+    const downloadSpy = vi.spyOn(downloader, 'download');
+    const onError = vi
+      .fn<Parameters<OnError>>()
+      .mockImplementation((err, url) => console.error(url, err.message));
+
+    const images = await imgdl(urls, { directory, onError });
+
+    expect(downloadSpy).toHaveBeenCalledTimes(2);
+    expect(onError).toHaveBeenCalledTimes(0);
+    expect(images).is.an('array').and.toHaveLength(2);
+
+    images.forEach(async (img, i) => {
+      expect(img).toStrictEqual({
+        url: urls[i],
+        originalName: `img-${i + 1}`,
+        originalExtension: 'jpg',
+        directory,
+        name: `img-${i + 1}`,
+        extension: 'jpg',
+        path: path.resolve(directory, `img-${i + 1}.jpg`),
       });
+      await expect(fs.access(img.path)).resolves.not.toThrow();
     });
+  });
 
-    test('with `onSuccess` argument', async () => {
-      const expectedFilePaths = expectedNames.map(
-        (n) => `${process.cwd()}/${n}`,
-      );
-      let downloadCount = 0;
-      const onSuccess = vi.fn().mockImplementation(() => {
-        downloadCount += 1;
+  it('should not throw any error if one of the URLs is invalid, call onError instead', async () => {
+    const urls = [`${BASE_URL}/img-1.jpg`, `${BASE_URL}/unknown`];
+    const onError = vi.fn<Parameters<OnError>>();
+
+    await expect(imgdl(urls, { directory, onError })).resolves.toHaveLength(1);
+    expect(onError).toHaveBeenCalledTimes(1);
+
+    // The first image should be downloaded
+    await expect(
+      fs.access(path.resolve(directory, 'img-1.jpg')),
+    ).resolves.not.toThrow();
+  });
+
+  it('should download multiple images if array of URLs is provided with options', async () => {
+    const urls = [`${BASE_URL}/img-1.jpg`, `${BASE_URL}/img-2.jpg`];
+    const parseImageParamsSpy = vi.spyOn(downloader, 'parseImageParams');
+    const onError = vi
+      .fn<Parameters<OnError>>()
+      .mockImplementation((err, url) => console.error(url, err.message));
+    const onSuccess = vi.fn();
+    const options = {
+      directory,
+      extension: 'png',
+      name: 'myimage',
+      onError,
+      onSuccess,
+    };
+    const images = await imgdl(urls, options);
+
+    expect(parseImageParamsSpy).toHaveBeenCalledTimes(2);
+    expect(onError).toHaveBeenCalledTimes(0);
+    expect(onSuccess).toHaveBeenCalledTimes(2);
+    expect(images).is.an('array').and.toHaveLength(2);
+
+    images.forEach(async (img, i) => {
+      expect(parseImageParamsSpy).toHaveBeenCalledWith(urls[i], options);
+
+      const name = `${options.name}${i === 0 ? '' : ` (${i})`}`;
+      expect(img).toStrictEqual({
+        url: urls[i],
+        originalName: `img-${i + 1}`,
+        originalExtension: 'jpg',
+        directory,
+        name,
+        extension: options.extension,
+        path: path.resolve(directory, `${name}.png`),
       });
-      const images = await imgdl(testUrls, { onSuccess });
-
-      expect(images.map((img) => img.path).sort()).toEqual(
-        expectedFilePaths.sort(),
-      );
-      expect(onSuccess).toHaveBeenCalledTimes(2);
-      expect(downloadCount).toEqual(2);
-
-      expectedFilePaths.forEach((filepath) => {
-        expect(fs.existsSync(filepath)).toBe(true); // Ensure the image is actually exists
-        fs.unlinkSync(filepath); // Cleanup
-      });
+      await expect(fs.access(img.path)).resolves.not.toThrow();
     });
+  });
 
-    test('with `onError` argument', async () => {
-      let errorCount = 0;
-      const onError = vi.fn().mockImplementation(() => {
-        errorCount += 1;
-      });
-      const images = await imgdl(['invalid-url1', 'invalid-url2'], { onError });
+  it('should abort download if signal is aborted', async () => {
+    // 30 images
+    const urls = Array.from(
+      { length: 30 },
+      (_, i) => `${BASE_URL}/img-${i}.jpg`,
+    );
+    const controller = new AbortController();
 
-      expect(onError).toHaveBeenCalledTimes(2);
-      expect(errorCount).toEqual(2);
-      expect(images).toEqual([]);
-    });
+    // Abort after 100ms
+    setTimeout(() => controller.abort(), 100);
+
+    await expect(
+      imgdl(urls, { directory, signal: controller.signal }),
+    ).rejects.toThrow(/aborted/);
+
+    // First image should be downloaded
+    await expect(
+      fs.access(path.resolve(directory, 'img-0.jpg')),
+    ).resolves.not.toThrow();
+
+    // The last image should not be downloaded
+    await expect(
+      fs.access(path.resolve(directory, 'img-30.jpg')),
+    ).rejects.toThrow();
   });
 });
