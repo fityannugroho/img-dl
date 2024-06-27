@@ -96,7 +96,7 @@ describe('`imgdl`', () => {
     expect(onError).toHaveBeenCalledTimes(0);
     expect(images).is.an('array').and.toHaveLength(2);
 
-    images.forEach(async (img, i) => {
+    for (const [i, img] of images.entries()) {
       expect(img).toStrictEqual({
         url: urls[i],
         originalName: `img-${i + 1}`,
@@ -107,7 +107,7 @@ describe('`imgdl`', () => {
         path: path.resolve(directory, `img-${i + 1}.jpg`),
       });
       await expect(fs.access(img.path)).resolves.not.toThrow();
-    });
+    }
   });
 
   it('should not throw any error if one of the URLs is invalid, call onError instead', async () => {
@@ -144,7 +144,7 @@ describe('`imgdl`', () => {
     expect(onSuccess).toHaveBeenCalledTimes(2);
     expect(images).is.an('array').and.toHaveLength(2);
 
-    images.forEach(async (img, i) => {
+    for (const [i, img] of images.entries()) {
       expect(parseImageParamsSpy).toHaveBeenCalledWith(urls[i], options);
 
       const name = `${options.name}${i === 0 ? '' : ` (${i})`}`;
@@ -158,7 +158,7 @@ describe('`imgdl`', () => {
         path: path.resolve(directory, `${name}.png`),
       });
       await expect(fs.access(img.path)).resolves.not.toThrow();
-    });
+    }
   });
 
   it('should abort download if signal is aborted', async () => {
