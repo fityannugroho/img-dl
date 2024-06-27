@@ -228,34 +228,34 @@ describe('`download`', () => {
     const image = await download(expectedImage);
     try {
       expect(image).toMatchObject(expectedImage);
-      expect(() => fs.accessSync(image.path)).not.toThrow();
+      await expect(fs.promises.access(image.path)).resolves.not.toThrow();
     } finally {
-      fs.rmSync(image.path, { force: true });
+      await fs.promises.rm(image.path, { force: true });
     }
   });
 
   it('should throw an error if directory cannot be created', async () => {
     const directory = '/restricted-dir';
     const image = parseImageParams(`${BASE_URL}/image.jpg`, { directory });
-    await expect(() => download(image)).rejects.toThrow(DirectoryError);
+    await expect(download(image)).rejects.toThrow(DirectoryError);
   });
 
   it.each(['tmp', 'tmp/images'])(
     'should create the directory if it does not exist: `%s`',
     async (directory) => {
       // Prepare: ensure the directory does not exist
-      fs.rmSync(directory, { recursive: true, force: true });
+      await fs.promises.rm(directory, { recursive: true, force: true });
 
       const image = parseImageParams(`${BASE_URL}/image.jpg`, { directory });
       const { path: actualPath } = await download(image);
 
       try {
         // Check if the directory was created
-        expect(fs.existsSync(directory)).toBe(true);
+        await expect(fs.promises.access(directory)).resolves.not.toThrow();
         // Check if the file was created
-        expect(() => fs.accessSync(actualPath)).not.toThrow();
+        await expect(fs.promises.access(actualPath)).resolves.not.toThrow();
       } finally {
-        fs.rmSync(directory, { recursive: true, force: true });
+        await fs.promises.rm(directory, { recursive: true, force: true });
       }
     },
   );
@@ -263,7 +263,7 @@ describe('`download`', () => {
   it('should throw an error if the response is not an image', async () => {
     await expect(
       // `GET /` will return a 200 OK response with `OK` body
-      () => download(parseImageParams(BASE_URL)),
+      download(parseImageParams(BASE_URL)),
     ).rejects.toThrow(RequestError);
   });
 
@@ -272,7 +272,7 @@ describe('`download`', () => {
 
     await expect(
       // `GET /unknown` will return a 404 Not Found response
-      () => download(parseImageParams(url)),
+      download(parseImageParams(url)),
     ).rejects.toThrow(RequestError);
   });
 
@@ -289,6 +289,6 @@ describe('`download`', () => {
       };
     });
 
-    await expect(() => download(image)).rejects.toThrow(Error);
+    await expect(download(image)).rejects.toThrow(Error);
   });
 });
