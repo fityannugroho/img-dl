@@ -20,27 +20,27 @@ import { server } from './fixtures/mocks/node.js';
 describe('parseImageParams', () => {
   it('should set values from URL if no options are provided', () => {
     const url = 'https://example.com/someimage.webp';
-    expect(parseImageParams(url)).toMatchObject({
+    expect(parseImageParams(url)).toStrictEqual({
       url,
       name: 'someimage',
       extension: 'webp',
       directory: process.cwd(),
       originalName: 'someimage',
       originalExtension: 'webp',
-      path: path.resolve(process.cwd(), 'someimage.webp'),
+      path: path.resolve('someimage.webp'),
     });
   });
 
   it('should use default values if URL has no file ending', () => {
     const url = 'https://example.com/someimage';
-    expect(parseImageParams(url)).toMatchObject({
+    expect(parseImageParams(url)).toStrictEqual({
       url,
       name: DEFAULT_NAME,
       extension: DEFAULT_EXTENSION,
       directory: process.cwd(),
       originalName: undefined,
       originalExtension: undefined,
-      path: path.resolve(process.cwd(), `${DEFAULT_NAME}.${DEFAULT_EXTENSION}`),
+      path: path.resolve(`${DEFAULT_NAME}.${DEFAULT_EXTENSION}`),
     });
   });
 
@@ -58,7 +58,7 @@ describe('parseImageParams', () => {
     const url = 'https://example.com/image.jpg';
     const result = parseImageParams(url, { directory: '' });
     expect(result.directory).toBe(process.cwd());
-    expect(result.path).toBe(path.resolve(process.cwd(), 'image.jpg'));
+    expect(result.path).toBe(path.resolve('image.jpg'));
   });
 
   it.each([
@@ -119,13 +119,11 @@ describe('parseImageParams', () => {
     'new.name',
     ' newname',
   ])('should set a valid name: `%s`', (name) => {
-    const url = 'https://example.com/someimage.jpg';
+    const url = 'https://example.com/someimage.webp';
     const result = parseImageParams(url, { name });
     expect(result.originalName).toBe('someimage');
     expect(result.name).toBe(name);
-    expect(result.path).toBe(
-      path.resolve(process.cwd(), `${name}.${DEFAULT_EXTENSION}`),
-    );
+    expect(result.path).toBe(path.resolve(`${name}.webp`));
   });
 
   it('should throw error if name contains extension', () => {
@@ -182,9 +180,7 @@ describe('parseImageParams', () => {
       const result = parseImageParams(url, { extension });
       expect(result.originalExtension).toBe('jpg');
       expect(result.extension).toBe(extension);
-      expect(result.path).toBe(
-        path.resolve(process.cwd(), `image.${extension}`),
-      );
+      expect(result.path).toBe(path.resolve(`image.${extension}`));
     },
   );
 
@@ -227,7 +223,7 @@ describe('`download`', () => {
     const expectedImage = parseImageParams(`${BASE_URL}/image.jpg`);
     const image = await download(expectedImage);
     try {
-      expect(image).toMatchObject(expectedImage);
+      expect(image).toStrictEqual(expectedImage);
       await expect(fs.promises.access(image.path)).resolves.not.toThrow();
     } finally {
       await fs.promises.rm(image.path, { force: true });
@@ -240,7 +236,7 @@ describe('`download`', () => {
     await expect(download(image)).rejects.toThrow(DirectoryError);
   });
 
-  it.each(['tmp', 'tmp/images'])(
+  it.each(['tmp', 'test/tmp'])(
     'should create the directory if it does not exist: `%s`',
     async (directory) => {
       // Prepare: ensure the directory does not exist
