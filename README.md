@@ -124,7 +124,12 @@ imgdl https://example.com/image-{i}.jpg --increment --start=1 --end=10
 ```js
 import imgdl from 'img-dl';
 
-const image = await imgdl('https://example.com/image.jpg');
+const image = await new Promise((resolve, reject) => {
+  imgdl('https://example.com/image.jpg', {
+    onSuccess: resolve,
+    onError: reject,
+  });
+});
 console.log(image);
 /*
 {
@@ -144,15 +149,30 @@ console.log(image);
 ```js
 import imgdl from 'img-dl';
 
-const images = await imgdl([
+const urls = [
   'https://example.com/image.jpg',
   'https://example.com/image2.jpg',
-]);
+];
+
+await imgdl(urls, {
+  onSuccess: (image) => {
+    // Do something with the downloaded image
+    console.log(image);
+  },
+  onError: (error, url) => {
+    // Do something when the image fails to download
+    console.error(`Failed to download ${url}: ${error.message}`);
+  },
+});
+
+console.log('Download completed');
 ```
 
 ## API
 
 ### imgdl(url, ?options)
+
+Returns: `Promise<void>`
 
 Download image(s) from the given URL(s).
 
@@ -215,14 +235,14 @@ Set the maximum number of times to retry the request if it fails.
 Type: `(image: Image) => void`<br>
 Default: `undefined`
 
-The callback function to be called when the image is successfully downloaded. Only available when downloading multiple images.
+The callback function to be called when the image is successfully downloaded.
 
 ##### `onError`
 
 Type: `(error: Error, url: string) => void`<br>
 Default: `undefined`
 
-The callback function to be called when the image fails to download. Only available when downloading multiple images.
+The callback function to be called when the image fails to download.
 
 ##### `signal`
 
