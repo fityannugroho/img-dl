@@ -98,7 +98,7 @@ async function imgdl(url: string | string[], options?: Options): Promise<void> {
 
   const countNames = new Map<string, number>();
 
-  for (const _url of urls) {
+  urls.forEach(async (_url) => {
     const img = parseImageParams(_url, { directory, name, extension });
 
     // Make sure the name is unique
@@ -128,7 +128,7 @@ async function imgdl(url: string | string[], options?: Options): Promise<void> {
         _url,
       );
     }
-  }
+  });
 
   await queue.onIdle();
 }
