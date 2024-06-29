@@ -103,7 +103,7 @@ const errorLog = chalk.bold.red;
 const warningLog = chalk.yellow;
 const dimLog = chalk.dim;
 
-async function main() {
+async function bootstrap() {
   let urls = cli.input;
   const { flags } = cli;
 
@@ -112,7 +112,7 @@ async function main() {
   }
 
   if (!urls.length) {
-    cli.showHelp();
+    cli.showHelp(0);
   }
 
   if (flags.increment) {
@@ -233,7 +233,7 @@ async function main() {
   }
 }
 
-main().catch((error: Error) => {
+bootstrap().catch((error: Error) => {
   console.error(errorLog(`\n${error.name}: ${error.message}`));
   process.exit(1);
 });
