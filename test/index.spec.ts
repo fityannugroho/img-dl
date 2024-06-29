@@ -1,105 +1,205 @@
-import fs from 'node:fs';
-import { describe, expect, test, vi } from 'vitest';
-import { DEFAULT_NAME } from '~/constanta.js';
-import imgdl from '~/index.js';
+import fs from 'node:fs/promises';
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  describe,
+  expect,
+  it,
+  vi,
+} from 'vitest';
+import imgdl, { Image } from '~/index.js';
+import { server } from './fixtures/mocks/node.js';
+import { BASE_URL } from './fixtures/mocks/handlers.js';
+import * as downloader from '~/downloader.js';
+import path from 'node:path';
 
-describe('`imgdl()`', () => {
-  test('single', { timeout: 15000 }, async () => {
-    const url = 'https://picsum.photos/200/300.webp';
-    const expectedFilePath = `${process.cwd()}/300.webp`;
+describe('`imgdl`', () => {
+  /**
+   * The directory to save the downloaded images.
+   */
+  const directory = 'test/tmp';
 
-    expect((await imgdl(url)).path).toEqual(expectedFilePath);
-    expect(fs.existsSync(expectedFilePath)).toBe(true); // Ensure the image is actually exists
+  beforeAll(() => server.listen());
 
-    // Cleanup
-    fs.unlinkSync(expectedFilePath);
+  afterEach(async () => {
+    server.resetHandlers();
+
+    // Clean up downloaded images
+    await fs.rm(directory, { force: true, recursive: true });
   });
 
-  describe('multiple', () => {
-    const testUrls = [
-      'https://picsum.photos/200/300.webp',
-      'https://picsum.photos/200/300',
-    ];
-    const expectedNames = ['300-1.webp', `${DEFAULT_NAME}-2.jpg`];
+  afterAll(() => server.close());
 
-    test('only array of `url`s', { timeout: 15000 }, async () => {
-      const expectedFilePaths = expectedNames.map(
-        (n) => `${process.cwd()}/${n}`,
-      );
-      const images = await imgdl(testUrls);
-
-      expect(images.map((img) => img.path).sort()).toEqual(
-        expectedFilePaths.sort(),
-      );
-      expectedFilePaths.forEach((filepath) => {
-        expect(fs.existsSync(filepath)).toBe(true); // Ensure the image is actually exists
-        fs.unlinkSync(filepath); // Cleanup
-      });
+  it('should download an image if single URL is provided', async () => {
+    const url = `${BASE_URL}/image.jpg`;
+    const image = await new Promise<Image>((resolve, rejects) => {
+      imgdl(url, { directory, onSuccess: resolve, onError: rejects });
     });
 
-    test('with `directory` argument', { timeout: 15000 }, async () => {
-      const directory = 'test/tmp';
-      const expectedFilePaths = expectedNames.map(
-        (n) => `${process.cwd()}/${directory}/${n}`,
-      );
-      const images = await imgdl(testUrls, { directory });
+    expect(image).toStrictEqual({
+      url,
+      name: 'image',
+      extension: 'jpg',
+      directory,
+      originalName: 'image',
+      originalExtension: 'jpg',
+      path: path.resolve(directory, 'image.jpg'),
+    });
+    await expect(fs.access(image.path)).resolves.not.toThrow();
+  });
 
-      expect(images.map((img) => img.path).sort()).toEqual(
-        expectedFilePaths.sort(),
-      );
-      expectedFilePaths.forEach((filepath) => {
-        expect(fs.existsSync(filepath)).toBe(true); // Ensure the image is actually exists
-        fs.unlinkSync(filepath); // Cleanup
-      });
+  it('should download an image if single URL is provided with options', async () => {
+    const parseImageParamsSpy = vi.spyOn(downloader, 'parseImageParams');
+    const url = `${BASE_URL}/image.jpg`;
+    const imageOptions = {
+      directory: directory + '/images',
+      extension: 'png',
+      name: 'myimage',
+    };
+
+    const image = await new Promise<Image>((resolve, rejects) => {
+      imgdl(url, { ...imageOptions, onSuccess: resolve, onError: rejects });
     });
 
-    test('with `name` argument', { timeout: 15000 }, async () => {
-      const expectedFilePaths = ['asset-1.webp', 'asset-2.jpg'].map(
-        (n) => `${process.cwd()}/${n}`,
-      );
-      const images = await imgdl(testUrls, { name: 'asset' });
+    expect(parseImageParamsSpy).toHaveBeenCalledOnce();
+    expect(parseImageParamsSpy).toHaveBeenCalledWith(url, imageOptions);
+    expect(image).toStrictEqual({
+      ...imageOptions,
+      url,
+      originalName: 'image',
+      originalExtension: 'jpg',
+      path: path.resolve(imageOptions.directory, 'myimage.png'),
+    });
+    await expect(fs.access(image.path)).resolves.not.toThrow();
+  });
 
-      expect(images.map((img) => img.path).sort()).toEqual(
-        expectedFilePaths.sort(),
-      );
-      expectedFilePaths.forEach((filepath) => {
-        expect(fs.existsSync(filepath)).toBe(true); // Ensure the image is actually exists
-        fs.unlinkSync(filepath); // Cleanup
+  it('should not throw any error if URL is invalid, call onError instead', async () => {
+    const url = `${BASE_URL}/unknown`;
+    const onSuccess = vi.fn();
+    const onError = vi.fn();
+
+    await expect(imgdl(url, { onSuccess, onError })).resolves.not.toThrow();
+    expect(onSuccess).toHaveBeenCalledTimes(0);
+    expect(onError).toHaveBeenCalledTimes(1);
+  });
+
+  it('should download multiple images if array of URLs is provided', async () => {
+    const urls = [`${BASE_URL}/img-1.jpg`, `${BASE_URL}/img-2.jpg`];
+    const downloadSpy = vi.spyOn(downloader, 'download');
+    const images: Image[] = [];
+    const onSuccess = vi
+      .fn<[Image]>()
+      .mockImplementation((image) => images.push(image));
+    const onError = vi.fn();
+
+    await imgdl(urls, { directory, onSuccess, onError });
+
+    expect(downloadSpy).toHaveBeenCalledTimes(2);
+    expect(onError).toHaveBeenCalledTimes(0);
+    expect(images).is.an('array').and.toHaveLength(2);
+
+    for (const [i, img] of images.entries()) {
+      expect(img).toStrictEqual({
+        url: urls[i],
+        originalName: `img-${i + 1}`,
+        originalExtension: 'jpg',
+        directory,
+        name: `img-${i + 1}`,
+        extension: 'jpg',
+        path: path.resolve(directory, `img-${i + 1}.jpg`),
       });
+      await expect(fs.access(img.path)).resolves.not.toThrow();
+    }
+  });
+
+  it('should not throw any error if one of the URLs is invalid, call onError instead', async () => {
+    const urls = [`${BASE_URL}/img-1.jpg`, `${BASE_URL}/unknown`];
+    const images: Image[] = [];
+    const onSuccess = vi
+      .fn<[Image]>()
+      .mockImplementation((image) => images.push(image));
+    const onError = vi.fn();
+
+    await imgdl(urls, { directory, onSuccess, onError });
+
+    expect(images).toHaveLength(1);
+    expect(onSuccess).toHaveBeenCalledTimes(1);
+    expect(onError).toHaveBeenCalledTimes(1);
+
+    // The first image should be downloaded
+    await expect(
+      fs.access(path.resolve(directory, 'img-1.jpg')),
+    ).resolves.not.toThrow();
+  });
+
+  it('should download multiple images if array of URLs is provided with options', async () => {
+    const urls = [`${BASE_URL}/img-1.jpg`, `${BASE_URL}/img-2.jpg`];
+    const parseImageParamsSpy = vi.spyOn(downloader, 'parseImageParams');
+    const images: Image[] = [];
+    const onSuccess = vi
+      .fn<[Image]>()
+      .mockImplementation((image) => images.push(image));
+    const onError = vi.fn();
+    const imageOptions = { directory, extension: 'png', name: 'myimage' };
+
+    await imgdl(urls, { ...imageOptions, onError, onSuccess });
+
+    expect(parseImageParamsSpy).toHaveBeenCalledTimes(2);
+    expect(onError).toHaveBeenCalledTimes(0);
+    expect(onSuccess).toHaveBeenCalledTimes(2);
+    expect(images).is.an('array').and.toHaveLength(2);
+
+    for (const [i, img] of images.entries()) {
+      expect(parseImageParamsSpy).toHaveBeenCalledWith(urls[i], imageOptions);
+
+      const name = `${imageOptions.name}${i === 0 ? '' : ` (${i})`}`;
+      expect(img).toStrictEqual({
+        url: urls[i],
+        originalName: `img-${i + 1}`,
+        originalExtension: 'jpg',
+        directory,
+        name,
+        extension: imageOptions.extension,
+        path: path.resolve(directory, `${name}.png`),
+      });
+      await expect(fs.access(img.path)).resolves.not.toThrow();
+    }
+  });
+
+  it('should abort download if signal is aborted', async () => {
+    // 30 images
+    const urls = Array.from(
+      { length: 30 },
+      (_, i) => `${BASE_URL}/img-${i}.jpg`,
+    );
+
+    let countSuccess = 0,
+      countError = 0;
+    const onSuccess = vi.fn().mockImplementation(() => countSuccess++);
+    const onError = vi.fn().mockImplementation(() => countError++);
+
+    const controller = new AbortController();
+    setTimeout(() => controller.abort(), 100); // Abort after 100ms
+
+    await imgdl(urls, {
+      directory,
+      onSuccess,
+      onError,
+      signal: controller.signal,
     });
 
-    test('with `onSuccess` argument', { timeout: 15000 }, async () => {
-      const expectedFilePaths = expectedNames.map(
-        (n) => `${process.cwd()}/${n}`,
-      );
-      let downloadCount = 0;
-      const onSuccess = vi.fn().mockImplementation(() => {
-        downloadCount += 1;
-      });
-      const images = await imgdl(testUrls, { onSuccess });
+    expect(countSuccess).toBeGreaterThan(1);
+    expect(countError).toBeGreaterThan(1);
 
-      expect(images.map((img) => img.path).sort()).toEqual(
-        expectedFilePaths.sort(),
-      );
-      expect(onSuccess).toHaveBeenCalledTimes(2);
-      expect(downloadCount).toEqual(2);
+    // First image should be downloaded
+    await expect(
+      fs.access(path.resolve(directory, 'img-0.jpg')),
+    ).resolves.not.toThrow();
 
-      expectedFilePaths.forEach((filepath) => {
-        expect(fs.existsSync(filepath)).toBe(true); // Ensure the image is actually exists
-        fs.unlinkSync(filepath); // Cleanup
-      });
-    });
-
-    test('with `onError` argument', async () => {
-      let errorCount = 0;
-      const onError = vi.fn().mockImplementation(() => {
-        errorCount += 1;
-      });
-      const images = await imgdl(['invalid-url1', 'invalid-url2'], { onError });
-
-      expect(onError).toHaveBeenCalledTimes(2);
-      expect(errorCount).toEqual(2);
-      expect(images).toEqual([]);
-    });
+    // The last image should not be downloaded
+    await expect(
+      fs.access(path.resolve(directory, 'img-30.jpg')),
+    ).rejects.toThrow();
   });
 });

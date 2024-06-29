@@ -3,9 +3,10 @@ import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
   test: {
+    pool: 'forks',
     root: './',
     alias: {
-      '~': path.resolve(__dirname, './src'),
+      '~': path.resolve(import.meta.dirname, './src'),
     },
     coverage: {
       provider: 'v8',

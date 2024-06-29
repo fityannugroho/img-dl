@@ -12,7 +12,7 @@ import ArgumentError from './errors/ArgumentError.js';
 import DirectoryError from './errors/DirectoryError.js';
 import { Image } from './index.js';
 
-export type DownloadOptions = {
+export type ImageOptions = {
   /**
    * The directory to save the image to.
    *
@@ -20,27 +20,15 @@ export type DownloadOptions = {
    */
   directory?: string;
   /**
-   * The headers to send with the request.
-   */
-  headers?: Record<string, string | string[] | undefined>;
-  /**
    * The name of the image file.
    *
-   * You also can provide a function that returns the name.
-   * The function will be called with the original name, if it exists in the URL.
+   * If not provided, the default value will be the **original name** if it exists in the URL.
    *
-   * The default value will be used if this value (or the function) returns an empty string.
-   *
-   * The default value will be the **original name** if it exists in the URL.
    * Otherwise, it will be **'image'**.
-   */
-  name?: string | ((original?: string) => string);
-  /**
-   * Set the maximum number of times to retry the request if it fails.
    *
-   * @default 2
+   * If a name with same extension already exists, ` (1)`, ` (2)`, etc. will be added to the end of the name.
    */
-  maxRetry?: number;
+  name?: string;
   /**
    * The extension of the image.
    *
@@ -49,6 +37,19 @@ export type DownloadOptions = {
    * If the URL doesn't have an extension, `jpg` will be used.
    */
   extension?: string;
+};
+
+export type DownloadOptions = {
+  /**
+   * The headers to send with the request.
+   */
+  headers?: Record<string, string | string[] | undefined>;
+  /**
+   * Set the maximum number of times to retry the request if it fails.
+   *
+   * @default 2
+   */
+  maxRetry?: number;
   /**
    * Set timeout for each request in milliseconds.
    */
@@ -60,22 +61,40 @@ export type DownloadOptions = {
 };
 
 /**
- * Set the options with the default values if they are not provided.
+ * Parses and validates the image parameters.
+ *
+ * If image options are not provided, the default values will be used.
+ *
+ * See {@link ImageOptions} for more information.
  *
  * @throws {ArgumentError} If there is an invalid value.
  */
-export function parseImageParams(url: string, options?: DownloadOptions) {
+export function parseImageParams(url: string, options?: ImageOptions) {
+  let validUrl: URL;
+
+  try {
+    validUrl = new URL(url);
+  } catch (error) {
+    throw new ArgumentError('Invalid URL');
+  }
+
+  if (!['http:', 'https:'].includes(validUrl.protocol)) {
+    throw new ArgumentError('URL protocol must be http or https');
+  }
+
   const lowerImgExts = [...imageExtensions].map((ext) => ext.toLowerCase());
   const originalExt = path.extname(url).replace('.', '');
   const img: Image = {
-    url,
+    url, // TODO: return `URL` object instead of string
     name: '',
     extension: '',
     directory: options?.directory
       ? path.normalize(options.directory)
       : process.cwd(),
     originalName:
-      originalExt === '' ? undefined : path.basename(url, `.${originalExt}`),
+      originalExt === ''
+        ? undefined
+        : path.basename(validUrl.pathname, `.${originalExt}`),
     originalExtension: originalExt === '' ? undefined : originalExt,
     path: '',
   };
@@ -87,9 +106,7 @@ export function parseImageParams(url: string, options?: DownloadOptions) {
   }
 
   // Set name
-  if (typeof options?.name === 'function') {
-    img.name = options.name(img.originalName);
-  } else if (options?.name) {
+  if (options?.name) {
     img.name = options.name;
   }
 
@@ -123,6 +140,15 @@ export function parseImageParams(url: string, options?: DownloadOptions) {
       : DEFAULT_EXTENSION;
   }
 
+  // Make sure the path is unique, if not, add a number to the end of the name.
+  while (
+    fs.existsSync(path.resolve(img.directory, `${img.name}.${img.extension}`))
+  ) {
+    const match = img.name.match(/ \((\d+)\)$/);
+    const num = match ? parseInt(match[1], 10) + 1 : 1;
+    img.name = img.name.replace(/ \(\d+\)$/, '') + ` (${num})`;
+  }
+
   // Set path
   img.path = path.resolve(img.directory, `${img.name}.${img.extension}`);
 
@@ -130,25 +156,22 @@ export function parseImageParams(url: string, options?: DownloadOptions) {
 }
 
 /**
- * Downloads an image from a URL.
- * @param url The URL of the image to download.
- * @param options The options to use.
+ * Downloads an image.
+ * @param img The validated image parameters. See {@link parseImageParams}.
+ * @param options The download options.
  * @returns The file path.
  * @throws {DirectoryError} If the directory cannot be created.
  * @throws {Error} If there are any other errors.
  */
-export async function download(url: string, options: DownloadOptions = {}) {
-  const img = parseImageParams(url, options);
-
+export async function download(img: Image, options: DownloadOptions = {}) {
   // Create the directory if it doesn't exist.
   if (!fs.existsSync(img.directory)) {
     try {
       fs.mkdirSync(img.directory, { recursive: true });
     } catch (error) {
-      if (error instanceof Error) {
-        throw new DirectoryError(error.message);
-      }
-      throw new DirectoryError(`Failed to create '${img.directory}'`);
+      throw new DirectoryError(
+        (error as Error)?.message ?? `Failed to create '${img.directory}'`,
+      );
     }
   }
 
@@ -180,12 +203,8 @@ export async function download(url: string, options: DownloadOptions = {}) {
       fetchStream.off('error', onError);
 
       pipeline(fetchStream, fs.createWriteStream(img.path))
-        .then(() => {
-          resolve(img);
-        }) // Return the image data.
-        .catch((error) => {
-          onError(error);
-        });
+        .then(() => resolve(img)) // Return the image data.
+        .catch(onError);
     });
 
     fetchStream.once('error', onError);
