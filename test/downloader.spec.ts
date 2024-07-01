@@ -21,7 +21,7 @@ describe('parseImageParams', () => {
   it('should set values from URL if no options are provided', () => {
     const url = 'https://example.com/someimage.webp';
     expect(parseImageParams(url)).toStrictEqual({
-      url,
+      url: new URL(url),
       name: 'someimage',
       extension: 'webp',
       directory: process.cwd(),
@@ -34,7 +34,7 @@ describe('parseImageParams', () => {
   it('should use default values if URL has no file ending', () => {
     const url = 'https://example.com/someimage';
     expect(parseImageParams(url)).toStrictEqual({
-      url,
+      url: new URL(url),
       name: DEFAULT_NAME,
       extension: DEFAULT_EXTENSION,
       directory: process.cwd(),

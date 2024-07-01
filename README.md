@@ -133,7 +133,13 @@ const image = await new Promise((resolve, reject) => {
 console.log(image);
 /*
 {
-  url: 'https://example.com/image.jpg',
+  url: {
+    href: 'https://example.com/image.jpg',
+    origin: 'https://example.com',
+    protocol: 'https:',
+    pathname: '/image.jpg',
+    // ...
+  },
   name: 'image',
   extension: 'jpg',
   directory: '/path/to/current/working/directory',
@@ -236,6 +242,16 @@ Type: `(image: Image) => void`<br>
 Default: `undefined`
 
 The callback function to be called when the image is successfully downloaded.
+
+`Image` is an object containing the information of the downloaded image. `Image` has the following properties:
+
+- `url`: The instance of `URL` class of the image. See [`URL` Class](https://nodejs.org/api/url.html#class-url).
+- `originalName`: The original name of the image if available. Default: `undefined`.
+- `originalExtension`: The original extension of the image if available. Default: `undefined`.
+- `name`: The user-defined name of the image. If not specified and the original name is available, the original name will be used. If the original name is not available, `'image'` will be used.
+- `extension`: The user-defined extension of the image. If not specified and the original extension is available, the original extension will be used. If the original extension is not available, `'jpg'` will be used.
+- `directory`: The output directory of the image.
+- `path`: The path of the downloaded image.
 
 ##### `onError`
 

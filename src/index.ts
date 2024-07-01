@@ -13,7 +13,7 @@ export type Image = {
   /**
    * The URL of the image.
    */
-  url: string;
+  url: URL;
   /**
    * The name of the image file, without the extension.
    */
