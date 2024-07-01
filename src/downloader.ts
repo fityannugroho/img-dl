@@ -85,7 +85,7 @@ export function parseImageParams(url: string, options?: ImageOptions) {
   const lowerImgExts = [...imageExtensions].map((ext) => ext.toLowerCase());
   const originalExt = path.extname(url).replace('.', '');
   const img: Image = {
-    url, // TODO: return `URL` object instead of string
+    url: validUrl,
     name: '',
     extension: '',
     directory: options?.directory

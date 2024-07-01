@@ -38,7 +38,7 @@ describe('`imgdl`', () => {
     });
 
     expect(image).toStrictEqual({
-      url,
+      url: new URL(url),
       name: 'image',
       extension: 'jpg',
       directory,
@@ -66,7 +66,7 @@ describe('`imgdl`', () => {
     expect(parseImageParamsSpy).toHaveBeenCalledWith(url, imageOptions);
     expect(image).toStrictEqual({
       ...imageOptions,
-      url,
+      url: new URL(url),
       originalName: 'image',
       originalExtension: 'jpg',
       path: path.resolve(imageOptions.directory, 'myimage.png'),
@@ -101,7 +101,7 @@ describe('`imgdl`', () => {
 
     for (const [i, img] of images.entries()) {
       expect(img).toStrictEqual({
-        url: urls[i],
+        url: new URL(urls[i]),
         originalName: `img-${i + 1}`,
         originalExtension: 'jpg',
         directory,
@@ -155,7 +155,7 @@ describe('`imgdl`', () => {
 
       const name = `${imageOptions.name}${i === 0 ? '' : ` (${i})`}`;
       expect(img).toStrictEqual({
-        url: urls[i],
+        url: new URL(urls[i]),
         originalName: `img-${i + 1}`,
         originalExtension: 'jpg',
         directory,
