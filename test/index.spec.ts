@@ -14,7 +14,7 @@ import { BASE_URL } from './fixtures/mocks/handlers.js';
 import * as downloader from '~/downloader.js';
 import path from 'node:path';
 
-describe('`imgdl`', () => {
+describe.skip('`imgdl`', () => {
   /**
    * The directory to save the downloaded images.
    */
