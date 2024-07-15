@@ -224,7 +224,7 @@ describe('`download`', () => {
     const image = await download(expectedImage);
     try {
       expect(image).toStrictEqual(expectedImage);
-      await expect(fs.promises.access(image.path)).resolves.not.toThrow();
+      await expect(fs.promises.access(image.path)).resolves.toBeUndefined();
     } finally {
       await fs.promises.rm(image.path, { force: true });
     }
@@ -247,9 +247,9 @@ describe('`download`', () => {
 
       try {
         // Check if the directory was created
-        await expect(fs.promises.access(directory)).resolves.not.toThrow();
+        await expect(fs.promises.access(directory)).resolves.toBeUndefined();
         // Check if the file was created
-        await expect(fs.promises.access(actualPath)).resolves.not.toThrow();
+        await expect(fs.promises.access(actualPath)).resolves.toBeUndefined();
       } finally {
         await fs.promises.rm(directory, { recursive: true, force: true });
       }

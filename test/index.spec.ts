@@ -13,6 +13,7 @@ import { server } from './fixtures/mocks/node.js';
 import { BASE_URL } from './fixtures/mocks/handlers.js';
 import * as downloader from '~/downloader.js';
 import path from 'node:path';
+import DirectoryError from '~/errors/DirectoryError.js';
 
 describe('`imgdl`', () => {
   /**
@@ -46,10 +47,10 @@ describe('`imgdl`', () => {
       originalExtension: 'jpg',
       path: path.resolve(directory, 'image.jpg'),
     });
-    await expect(fs.access(image.path)).resolves.not.toThrow();
+    await expect(fs.access(image.path)).resolves.toBeUndefined();
   });
 
-  it('should download an image if single URL is provided with options', async () => {
+  it('should download an image with custom name & directory', async () => {
     const parseImageParamsSpy = vi.spyOn(downloader, 'parseImageParams');
     const url = `${BASE_URL}/image.jpg`;
     const imageOptions = {
@@ -71,7 +72,23 @@ describe('`imgdl`', () => {
       originalExtension: 'jpg',
       path: path.resolve(imageOptions.directory, 'myimage.png'),
     });
-    await expect(fs.access(image.path)).resolves.not.toThrow();
+    await expect(fs.access(image.path)).resolves.toBeUndefined();
+  });
+
+  it('should throw an error if directory cannot be created', async () => {
+    const url = `${BASE_URL}/image.jpg`;
+    const directory = '/restricted-dir';
+    let error: Error | undefined;
+
+    await expect(
+      imgdl(url, {
+        directory,
+        onError: (err) => {
+          error = err;
+        },
+      }),
+    ).resolves.toBeUndefined();
+    expect(error).toBeInstanceOf(DirectoryError);
   });
 
   it('should not throw any error if URL is invalid, call onError instead', async () => {
@@ -79,7 +96,7 @@ describe('`imgdl`', () => {
     const onSuccess = vi.fn();
     const onError = vi.fn();
 
-    await expect(imgdl(url, { onSuccess, onError })).resolves.not.toThrow();
+    await expect(imgdl(url, { onSuccess, onError })).resolves.toBeUndefined();
     expect(onSuccess).toHaveBeenCalledTimes(0);
     expect(onError).toHaveBeenCalledTimes(1);
   });
@@ -107,7 +124,7 @@ describe('`imgdl`', () => {
         extension: 'jpg',
         path: path.resolve(directory, `img-${i + 1}.jpg`),
       });
-      await expect(fs.access(img.path)).resolves.not.toThrow();
+      await expect(fs.access(img.path)).resolves.toBeUndefined();
     }
   });
 
@@ -136,7 +153,7 @@ describe('`imgdl`', () => {
     ]);
 
     // The first image should be downloaded
-    await expect(fs.access(images[0].path)).resolves.not.toThrow();
+    await expect(fs.access(images[0].path)).resolves.toBeUndefined();
   });
 
   it('should download multiple images if array of URLs is provided with options', async () => {
@@ -167,7 +184,7 @@ describe('`imgdl`', () => {
         extension: imageOptions.extension,
         path: path.resolve(directory, `${name}.png`),
       });
-      await expect(fs.access(img.path)).resolves.not.toThrow();
+      await expect(fs.access(img.path)).resolves.toBeUndefined();
     }
   });
 
@@ -199,7 +216,7 @@ describe('`imgdl`', () => {
     // First image should be downloaded
     await expect(
       fs.access(path.resolve(directory, 'img-0.jpg')),
-    ).resolves.not.toThrow();
+    ).resolves.toBeUndefined();
 
     // The last image should not be downloaded
     await expect(
