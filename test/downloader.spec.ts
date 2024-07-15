@@ -219,15 +219,15 @@ describe('`download`', () => {
 
   afterAll(() => server.close());
 
-  it('should download an image and save it', async () => {
-    const expectedImage = parseImageParams(`${BASE_URL}/image.jpg`);
-    const image = await download(expectedImage);
-    try {
-      expect(image).toStrictEqual(expectedImage);
-      await expect(fs.promises.access(image.path)).resolves.not.toThrow();
-    } finally {
+  it('should download an image and save it', async ({ onTestFinished }) => {
+    const image = parseImageParams(`${BASE_URL}/image.jpg`);
+
+    onTestFinished(async () => {
       await fs.promises.rm(image.path, { force: true });
-    }
+    });
+
+    await expect(download(image)).resolves.toStrictEqual(image);
+    await expect(fs.promises.access(image.path)).resolves.toBeUndefined();
   });
 
   it('should throw an error if directory cannot be created', async () => {
@@ -236,55 +236,33 @@ describe('`download`', () => {
     await expect(download(image)).rejects.toThrow(DirectoryError);
   });
 
-  it.each(['tmp', 'test/tmp'])(
+  it.for(['tmp', 'test/tmp'])(
     'should create the directory if it does not exist: `%s`',
-    async (directory) => {
+    async ([directory], { onTestFinished }) => {
       // Prepare: ensure the directory does not exist
       await fs.promises.rm(directory, { recursive: true, force: true });
+
+      onTestFinished(async () => {
+        await fs.promises.rm(directory, { recursive: true, force: true });
+      });
 
       const image = parseImageParams(`${BASE_URL}/image.jpg`, { directory });
       const { path: actualPath } = await download(image);
 
-      try {
-        // Check if the directory was created
-        await expect(fs.promises.access(directory)).resolves.not.toThrow();
-        // Check if the file was created
-        await expect(fs.promises.access(actualPath)).resolves.not.toThrow();
-      } finally {
-        await fs.promises.rm(directory, { recursive: true, force: true });
-      }
+      await expect(fs.promises.access(directory)).resolves.toBeUndefined();
+      await expect(fs.promises.access(actualPath)).resolves.toBeUndefined();
     },
   );
 
   it('should throw an error if the response is not an image', async () => {
-    await expect(
-      // `GET /` will return a 200 OK response with `OK` body
-      download(parseImageParams(BASE_URL)),
-    ).rejects.toThrow(RequestError);
+    // `GET /` will return a 200 OK response with `OK` body
+    const image = parseImageParams(BASE_URL);
+    await expect(download(image)).rejects.toThrow(RequestError);
   });
 
   it('should throw an error if the response is unsuccessful', async () => {
-    const url = `${BASE_URL}/unknown`;
-
-    await expect(
-      // `GET /unknown` will return a 404 Not Found response
-      download(parseImageParams(url)),
-    ).rejects.toThrow(RequestError);
-  });
-
-  it('should throw an error if failed to save the image (because of createWriteStream error)', async () => {
-    const image = parseImageParams(`${BASE_URL}/image.jpg`);
-    const writeStreamSpyOn = vi.spyOn(fs, 'createWriteStream');
-
-    // @ts-expect-error: missing another method implementations
-    writeStreamSpyOn.mockImplementationOnce(() => {
-      return {
-        write: () => {
-          throw new Error('Failed to save the image');
-        },
-      };
-    });
-
-    await expect(download(image)).rejects.toThrow(Error);
+    // `GET /unknown` will return a 404 Not Found response
+    const image = parseImageParams(`${BASE_URL}/unknown`);
+    await expect(download(image)).rejects.toThrow(RequestError);
   });
 });

@@ -175,7 +175,7 @@ export async function download(img: Image, options: DownloadOptions = {}) {
     }
   }
 
-  return new Promise<Image>((resolve, reject) => {
+  return await new Promise<Image>((resolve, reject) => {
     const fetchStream = got.stream(img.url, {
       timeout: {
         request: options.timeout,
