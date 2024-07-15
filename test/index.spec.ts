@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-non-null-assertion */
 import fs from 'node:fs/promises';
 import {
   afterAll,
@@ -6,6 +7,7 @@ import {
   describe,
   expect,
   it,
+  onTestFinished,
   vi,
 } from 'vitest';
 import imgdl, { Image } from '~/index.js';
@@ -23,44 +25,50 @@ describe('`imgdl`', () => {
 
   beforeAll(() => server.listen());
 
-  afterEach(async () => {
-    server.resetHandlers();
-
-    // Clean up downloaded images
-    await fs.rm(directory, { recursive: true, force: true });
-  });
+  afterEach(() => server.resetHandlers());
 
   afterAll(() => server.close());
 
   it('should download an image if single URL is provided', async () => {
     const url = `${BASE_URL}/image.jpg`;
-    const image = await new Promise<Image>((resolve, rejects) => {
-      imgdl(url, { directory, onSuccess: resolve, onError: rejects });
+    let image: Image | undefined;
+    const onSuccess = vi.fn().mockImplementation((img) => {
+      image = img;
     });
 
+    onTestFinished(async () => {
+      await fs.rm(image!.path, { force: true });
+    });
+
+    await expect(imgdl(url, { onSuccess })).resolves.toBeUndefined();
+    expect(onSuccess).toHaveBeenCalledTimes(1);
     expect(image).toStrictEqual({
       url: new URL(url),
       name: 'image',
       extension: 'jpg',
-      directory,
+      directory: process.cwd(),
       originalName: 'image',
       originalExtension: 'jpg',
-      path: path.resolve(directory, 'image.jpg'),
+      path: path.resolve('image.jpg'),
     });
-    await expect(fs.access(image.path)).resolves.toBeUndefined();
+    await expect(fs.access(image!.path)).resolves.toBeUndefined();
   });
 
-  it('should download an image with custom name & directory', async () => {
+  it('should download an image with specific image options', async () => {
     const parseImageParamsSpy = vi.spyOn(downloader, 'parseImageParams');
     const url = `${BASE_URL}/image.jpg`;
     const imageOptions = {
-      directory: directory + '/images',
+      directory: 'test/tmp/images',
       extension: 'png',
       name: 'myimage',
     };
 
     const image = await new Promise<Image>((resolve, rejects) => {
       imgdl(url, { ...imageOptions, onSuccess: resolve, onError: rejects });
+    });
+
+    onTestFinished(async () => {
+      await fs.rm(image.path, { force: true });
     });
 
     expect(parseImageParamsSpy).toHaveBeenCalledOnce();
@@ -70,19 +78,20 @@ describe('`imgdl`', () => {
       url: new URL(url),
       originalName: 'image',
       originalExtension: 'jpg',
-      path: path.resolve(imageOptions.directory, 'myimage.png'),
+      path: path.resolve(
+        imageOptions.directory,
+        `${imageOptions.name}.${imageOptions.extension}`,
+      ),
     });
     await expect(fs.access(image.path)).resolves.toBeUndefined();
   });
 
-  it('should throw an error if directory cannot be created', async () => {
-    const url = `${BASE_URL}/image.jpg`;
-    const directory = '/restricted-dir';
+  it('should not throw error if directory cannot be created', async () => {
     let error: Error | undefined;
 
     await expect(
-      imgdl(url, {
-        directory,
+      imgdl(`${BASE_URL}/image.jpg`, {
+        directory: '/restricted-dir',
         onError: (err) => {
           error = err;
         },
@@ -91,7 +100,7 @@ describe('`imgdl`', () => {
     expect(error).toBeInstanceOf(DirectoryError);
   });
 
-  it('should not throw any error if URL is invalid, call onError instead', async () => {
+  it('should not throw any error if URL is invalid', async () => {
     const url = `${BASE_URL}/unknown`;
     const onSuccess = vi.fn();
     const onError = vi.fn();
@@ -108,7 +117,13 @@ describe('`imgdl`', () => {
     const onSuccess = vi.fn().mockImplementation((image) => images.push(image));
     const onError = vi.fn();
 
-    await imgdl(urls, { directory, onSuccess, onError });
+    onTestFinished(async () => {
+      for (const img of images) {
+        await fs.rm(img.path, { force: true });
+      }
+    });
+
+    await imgdl(urls, { onSuccess, onError });
 
     expect(downloadSpy).toHaveBeenCalledTimes(2);
     expect(onError).toHaveBeenCalledTimes(0);
@@ -119,10 +134,10 @@ describe('`imgdl`', () => {
         url: new URL(urls[i]),
         originalName: `img-${i + 1}`,
         originalExtension: 'jpg',
-        directory,
+        directory: process.cwd(),
         name: `img-${i + 1}`,
         extension: 'jpg',
-        path: path.resolve(directory, `img-${i + 1}.jpg`),
+        path: path.resolve(`img-${i + 1}.jpg`),
       });
       await expect(fs.access(img.path)).resolves.toBeUndefined();
     }
@@ -134,7 +149,11 @@ describe('`imgdl`', () => {
     const onSuccess = vi.fn().mockImplementation((image) => images.push(image));
     const onError = vi.fn();
 
-    await imgdl(urls, { directory, onSuccess, onError });
+    onTestFinished(async () => {
+      await fs.rm(images[0].path, { force: true });
+    });
+
+    await imgdl(urls, { onSuccess, onError });
 
     expect(images).toHaveLength(1);
     expect(onSuccess).toHaveBeenCalledTimes(1);
@@ -145,10 +164,10 @@ describe('`imgdl`', () => {
         url: new URL(urls[0]),
         originalName: 'img-1',
         originalExtension: 'jpg',
-        directory,
+        directory: process.cwd(),
         name: 'img-1',
         extension: 'jpg',
-        path: path.resolve(directory, 'img-1.jpg'),
+        path: path.resolve('img-1.jpg'),
       },
     ]);
 
@@ -163,6 +182,12 @@ describe('`imgdl`', () => {
     const onSuccess = vi.fn().mockImplementation((image) => images.push(image));
     const onError = vi.fn();
     const imageOptions = { directory, extension: 'png', name: 'myimage' };
+
+    onTestFinished(async () => {
+      for (const img of images) {
+        await fs.rm(img.path, { force: true });
+      }
+    });
 
     await imgdl(urls, { ...imageOptions, onError, onSuccess });
 
@@ -189,6 +214,12 @@ describe('`imgdl`', () => {
   });
 
   it('should abort download if signal is aborted', async () => {
+    const dir = directory + '/abort-test';
+
+    onTestFinished(async () => {
+      await fs.rm(path.resolve(dir), { recursive: true, force: true });
+    });
+
     // 30 images
     const urls = Array.from(
       { length: 30 },
@@ -204,7 +235,7 @@ describe('`imgdl`', () => {
     setTimeout(() => controller.abort(), 100); // Abort after 100ms
 
     await imgdl(urls, {
-      directory,
+      directory: dir,
       onSuccess,
       onError,
       signal: controller.signal,
@@ -215,12 +246,10 @@ describe('`imgdl`', () => {
 
     // First image should be downloaded
     await expect(
-      fs.access(path.resolve(directory, 'img-0.jpg')),
+      fs.access(path.resolve(dir, 'img-0.jpg')),
     ).resolves.toBeUndefined();
 
     // The last image should not be downloaded
-    await expect(
-      fs.access(path.resolve(directory, 'img-30.jpg')),
-    ).rejects.toThrow();
+    await expect(fs.access(path.resolve(dir, 'img-30.jpg'))).rejects.toThrow();
   });
 });
