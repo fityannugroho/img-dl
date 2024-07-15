@@ -14,7 +14,7 @@ import { BASE_URL } from './fixtures/mocks/handlers.js';
 import * as downloader from '~/downloader.js';
 import path from 'node:path';
 
-describe.skip('`imgdl`', () => {
+describe('`imgdl`', () => {
   /**
    * The directory to save the downloaded images.
    */
@@ -26,7 +26,7 @@ describe.skip('`imgdl`', () => {
     server.resetHandlers();
 
     // Clean up downloaded images
-    await fs.rm(directory, { force: true, recursive: true });
+    await fs.rm(directory, { recursive: true, force: true });
   });
 
   afterAll(() => server.close());
@@ -88,9 +88,7 @@ describe.skip('`imgdl`', () => {
     const urls = [`${BASE_URL}/img-1.jpg`, `${BASE_URL}/img-2.jpg`];
     const downloadSpy = vi.spyOn(downloader, 'download');
     const images: Image[] = [];
-    const onSuccess = vi
-      .fn<[Image]>()
-      .mockImplementation((image) => images.push(image));
+    const onSuccess = vi.fn().mockImplementation((image) => images.push(image));
     const onError = vi.fn();
 
     await imgdl(urls, { directory, onSuccess, onError });
@@ -116,9 +114,7 @@ describe.skip('`imgdl`', () => {
   it('should not throw any error if one of the URLs is invalid, call onError instead', async () => {
     const urls = [`${BASE_URL}/img-1.jpg`, `${BASE_URL}/unknown`];
     const images: Image[] = [];
-    const onSuccess = vi
-      .fn<[Image]>()
-      .mockImplementation((image) => images.push(image));
+    const onSuccess = vi.fn().mockImplementation((image) => images.push(image));
     const onError = vi.fn();
 
     await imgdl(urls, { directory, onSuccess, onError });
@@ -127,19 +123,27 @@ describe.skip('`imgdl`', () => {
     expect(onSuccess).toHaveBeenCalledTimes(1);
     expect(onError).toHaveBeenCalledTimes(1);
 
+    expect(images).toStrictEqual([
+      {
+        url: new URL(urls[0]),
+        originalName: 'img-1',
+        originalExtension: 'jpg',
+        directory,
+        name: 'img-1',
+        extension: 'jpg',
+        path: path.resolve(directory, 'img-1.jpg'),
+      },
+    ]);
+
     // The first image should be downloaded
-    await expect(
-      fs.access(path.resolve(directory, 'img-1.jpg')),
-    ).resolves.not.toThrow();
+    await expect(fs.access(images[0].path)).resolves.not.toThrow();
   });
 
   it('should download multiple images if array of URLs is provided with options', async () => {
     const urls = [`${BASE_URL}/img-1.jpg`, `${BASE_URL}/img-2.jpg`];
     const parseImageParamsSpy = vi.spyOn(downloader, 'parseImageParams');
     const images: Image[] = [];
-    const onSuccess = vi
-      .fn<[Image]>()
-      .mockImplementation((image) => images.push(image));
+    const onSuccess = vi.fn().mockImplementation((image) => images.push(image));
     const onError = vi.fn();
     const imageOptions = { directory, extension: 'png', name: 'myimage' };
 
@@ -176,8 +180,8 @@ describe.skip('`imgdl`', () => {
 
     let countSuccess = 0,
       countError = 0;
-    const onSuccess = vi.fn().mockImplementation(() => countSuccess++);
-    const onError = vi.fn().mockImplementation(() => countError++);
+    const onSuccess = vi.fn().mockImplementation(() => (countSuccess += 1));
+    const onError = vi.fn().mockImplementation(() => (countError += 1));
 
     const controller = new AbortController();
     setTimeout(() => controller.abort(), 100); // Abort after 100ms
