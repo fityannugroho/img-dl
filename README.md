@@ -174,6 +174,37 @@ await imgdl(urls, {
 console.log('Download completed');
 ```
 
+#### Bulk download with specific options
+
+```js
+import imgdl from 'img-dl';
+
+const options = {
+  // Set default image options for all images
+  name: 'avatar',
+  extension: 'png',
+
+  // Another options
+  onSuccess: (image) => {
+    console.log(`Downloaded ${image.name}.${image.extension}`);
+  },
+  onError: (error, url) => {
+    console.error(`Failed to download ${url}: ${error.message}`);
+  },
+  timeout: 5000,
+};
+
+await imgdl(
+  // Provide array of URLs with specific options
+  [
+    { url: 'http://example.com/image.jpg', name: 'myavatar' }, // Will be saved as `myavatar.png`
+    { url: 'http://example.com/image.jpg', extension: 'webp' }, // Will be saved as `avatar.webp`
+    { url: 'http://example.com/image2.jpg', directory: 'avatars' }, // Will be saved as `avatar.png` in `avatars` directory
+  ],
+  options,
+);
+```
+
 ## API
 
 ### imgdl(url, ?options)
@@ -184,10 +215,17 @@ Download image(s) from the given URL(s).
 
 #### `url`
 
-Type: `string | string[]` <br>
+Type: `string | (string | ({ url: string } & ImageOptions))[]`<br>
 Required: `true`
 
 The URL(s) of the image(s) to download. Required.
+
+If the `url` is a string, it will download a single image.
+
+If the `url` is an array, it will download multiple images.
+
+- Each item in the array can be a URL in **string** or an **object** containing the URL and the image options.
+- This URL-level options **will override** the function-level options, the image options provided in the second argument (see [`options`](#options)).
 
 #### `options`
 
