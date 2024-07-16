@@ -252,4 +252,128 @@ describe('`imgdl`', () => {
     // The last image should not be downloaded
     await expect(fs.access(path.resolve(dir, 'img-30.jpg'))).rejects.toThrow();
   });
+
+  it('should use specific ImageOption for each image url', async () => {
+    const images: Image[] = [];
+    const onSuccess = vi.fn().mockImplementation((image) => images.push(image));
+    const url = `${BASE_URL}/image.jpg`;
+    const sources = [
+      url,
+      { url },
+      { url, name: 'myimage' },
+      { url, extension: 'png' },
+      { url, directory: 'images' },
+      { url, name: 'myimage', extension: 'png', directory: 'images' },
+    ];
+    const defaultExpected = {
+      url: new URL('https://example.com/image.jpg'),
+      originalName: 'image',
+      originalExtension: 'jpg',
+      directory: process.cwd(),
+      name: 'image',
+      extension: 'jpg',
+      path: path.resolve('image.jpg'),
+    };
+
+    onTestFinished(async () => {
+      for (const img of images) {
+        await fs.rm(img.path, { force: true });
+      }
+    });
+
+    await expect(imgdl(sources, { onSuccess })).resolves.toBeUndefined();
+    expect(onSuccess).toHaveBeenCalledTimes(sources.length);
+    expect(images).toStrictEqual([
+      defaultExpected,
+      {
+        ...defaultExpected,
+        name: 'image (1)',
+        path: path.resolve('image (1).jpg'),
+      },
+      {
+        ...defaultExpected,
+        name: 'myimage',
+        path: path.resolve('myimage.jpg'),
+      },
+      {
+        ...defaultExpected,
+        extension: 'png',
+        path: path.resolve('image.png'),
+      },
+      {
+        ...defaultExpected,
+        directory: 'images',
+        path: path.resolve('images', 'image.jpg'),
+      },
+      {
+        ...defaultExpected,
+        name: 'myimage',
+        extension: 'png',
+        directory: 'images',
+        path: path.resolve('images', 'myimage.png'),
+      },
+    ]);
+
+    for (const img of images) {
+      await expect(fs.access(img.path)).resolves.toBeUndefined();
+    }
+  });
+
+  it('should use URL-level options over function-level', async () => {
+    const images: Image[] = [];
+    const onSuccess = vi.fn().mockImplementation((image) => images.push(image));
+    /**
+     * Default options for all images.
+     */
+    const options = { onSuccess, name: 'avatar', extension: 'png' };
+    const url = `${BASE_URL}/image.jpg`;
+    /**
+     * URLs with specific image options.
+     */
+    const sources = [
+      { url, name: 'myavatar' }, // Will be saved as `myavatar.png`
+      { url, extension: 'webp' }, // Will be saved as `avatar.webp`
+      { url, directory: 'avatars' }, // Will be saved as `avatar.png` in `avatars` directory
+    ];
+    const defaultExpected = {
+      url: new URL('https://example.com/image.jpg'),
+      originalName: 'image',
+      originalExtension: 'jpg',
+      directory: process.cwd(),
+      name: 'avatar',
+      extension: 'png',
+      path: path.resolve('avatar.png'),
+    };
+
+    onTestFinished(async () => {
+      for (const img of images) {
+        await fs.rm(img.path, { force: true });
+      }
+    });
+
+    await expect(imgdl(sources, options)).resolves.toBeUndefined();
+    expect(onSuccess).toHaveBeenCalledTimes(sources.length);
+    expect(images).toStrictEqual([
+      {
+        ...defaultExpected,
+        name: 'myavatar',
+        extension: 'png',
+        path: path.resolve('myavatar.png'),
+      },
+      {
+        ...defaultExpected,
+        extension: 'webp',
+        path: path.resolve('avatar.webp'),
+      },
+      {
+        ...defaultExpected,
+        directory: 'avatars',
+        path: path.resolve('avatars', 'avatar.png'),
+      },
+    ]);
+
+    for (const img of images) {
+      await expect(fs.access(img.path)).resolves.toBeUndefined();
+    }
+  });
 });
