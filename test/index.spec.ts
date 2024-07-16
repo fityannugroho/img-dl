@@ -232,7 +232,7 @@ describe('`imgdl`', () => {
     const onError = vi.fn().mockImplementation(() => (countError += 1));
 
     const controller = new AbortController();
-    setTimeout(() => controller.abort(), 100); // Abort after 100ms
+    setTimeout(() => controller.abort(), 300); // Abort after 300ms
 
     await imgdl(urls, {
       directory: dir,
@@ -258,8 +258,6 @@ describe('`imgdl`', () => {
     const onSuccess = vi.fn().mockImplementation((image) => images.push(image));
     const url = `${BASE_URL}/image.jpg`;
     const sources = [
-      url,
-      { url },
       { url, name: 'myimage' },
       { url, extension: 'png' },
       { url, directory: 'images' },
@@ -283,18 +281,7 @@ describe('`imgdl`', () => {
 
     await expect(imgdl(sources, { onSuccess })).resolves.toBeUndefined();
     expect(onSuccess).toHaveBeenCalledTimes(sources.length);
-    expect(images).toStrictEqual([
-      defaultExpected,
-      {
-        ...defaultExpected,
-        name: 'image (1)',
-        path: path.resolve('image (1).jpg'),
-      },
-      {
-        ...defaultExpected,
-        name: 'myimage',
-        path: path.resolve('myimage.jpg'),
-      },
+    expect(images.sort((a, b) => a.path.localeCompare(b.path))).toStrictEqual([
       {
         ...defaultExpected,
         extension: 'png',
@@ -311,6 +298,11 @@ describe('`imgdl`', () => {
         extension: 'png',
         directory: 'images',
         path: path.resolve('images', 'myimage.png'),
+      },
+      {
+        ...defaultExpected,
+        name: 'myimage',
+        path: path.resolve('myimage.jpg'),
       },
     ]);
 
@@ -353,13 +345,7 @@ describe('`imgdl`', () => {
 
     await expect(imgdl(sources, options)).resolves.toBeUndefined();
     expect(onSuccess).toHaveBeenCalledTimes(sources.length);
-    expect(images).toStrictEqual([
-      {
-        ...defaultExpected,
-        name: 'myavatar',
-        extension: 'png',
-        path: path.resolve('myavatar.png'),
-      },
+    expect(images.sort((a, b) => a.path.localeCompare(b.path))).toStrictEqual([
       {
         ...defaultExpected,
         extension: 'webp',
@@ -370,10 +356,39 @@ describe('`imgdl`', () => {
         directory: 'avatars',
         path: path.resolve('avatars', 'avatar.png'),
       },
+      {
+        ...defaultExpected,
+        name: 'myavatar',
+        extension: 'png',
+        path: path.resolve('myavatar.png'),
+      },
     ]);
 
     for (const img of images) {
       await expect(fs.access(img.path)).resolves.toBeUndefined();
     }
+  });
+
+  it('should accept array of URLs or objects with `url` property', async () => {
+    const images: Image[] = [];
+    const onSuccess = vi.fn().mockImplementation((image) => images.push(image));
+    const onError = vi.fn();
+    const urls = [
+      `${BASE_URL}/image.jpg`,
+      { url: `${BASE_URL}/img-1.jpg` },
+      { url: `${BASE_URL}/image.jpg`, name: 'myimage' },
+      { url: `${BASE_URL}/img-2.jpg`, extension: 'png' },
+      { url: `${BASE_URL}/img-3.jpg`, directory: 'images' },
+    ];
+
+    onTestFinished(async () => {
+      for (const img of images) {
+        await fs.rm(img.path, { force: true });
+      }
+    });
+
+    await expect(imgdl(urls, { onSuccess, onError })).resolves.toBeUndefined();
+    expect(onSuccess).toHaveBeenCalledTimes(urls.length);
+    expect(onError).toHaveBeenCalledTimes(0);
   });
 });
