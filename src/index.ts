@@ -72,7 +72,10 @@ export type Options = (ImageOptions & DownloadOptions) & {
   signal?: AbortSignal;
 };
 
-async function imgdl(url: string | string[], options?: Options): Promise<void> {
+async function imgdl(
+  url: string | (string | ({ url: string } & ImageOptions))[],
+  options?: Options,
+): Promise<void> {
   const {
     directory,
     name,
@@ -99,10 +102,18 @@ async function imgdl(url: string | string[], options?: Options): Promise<void> {
   const countNames = new Map<string, number>();
 
   urls.forEach(async (_url) => {
-    const img = parseImageParams(_url, { directory, name, extension });
+    // Get image URL and options
+    const { url: imgUrl, ...imgOptions } =
+      typeof _url === 'string' ? { url: _url } : _url;
 
-    // Make sure the name is unique
-    const nameKey = `${img.name}.${img.extension}`;
+    const img = parseImageParams(imgUrl, {
+      directory: imgOptions.directory || directory,
+      name: imgOptions.name || name,
+      extension: imgOptions.extension || extension,
+    });
+
+    // Make sure the name is unique in the destination directory
+    const nameKey = `${img.directory}/${img.name}.${img.extension}`;
     const count = countNames.get(nameKey);
     if (count) {
       img.name = `${img.name} (${count})`;
@@ -125,7 +136,7 @@ async function imgdl(url: string | string[], options?: Options): Promise<void> {
         error instanceof Error
           ? error
           : new Error('Unknown error', { cause: error }),
-        _url,
+        imgUrl,
       );
     }
   });
@@ -134,3 +145,4 @@ async function imgdl(url: string | string[], options?: Options): Promise<void> {
 }
 
 export default imgdl;
+export { ImageOptions, DownloadOptions };
