@@ -238,7 +238,7 @@ describe('`download`', () => {
 
   it.for(['tmp', 'test/tmp'])(
     'should create the directory if it does not exist: `%s`',
-    async ([directory], { onTestFinished }) => {
+    async (directory, { onTestFinished }) => {
       // Prepare: ensure the directory does not exist
       await fs.promises.rm(directory, { recursive: true, force: true });
 

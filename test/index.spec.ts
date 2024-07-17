@@ -7,7 +7,6 @@ import {
   describe,
   expect,
   it,
-  onTestFinished,
   vi,
 } from 'vitest';
 import imgdl, { Image } from '~/index.js';
@@ -29,7 +28,9 @@ describe('`imgdl`', () => {
 
   afterAll(() => server.close());
 
-  it('should download an image if single URL is provided', async () => {
+  it('should download an image if single URL is provided', async ({
+    onTestFinished,
+  }) => {
     const url = `${BASE_URL}/image.jpg`;
     let image: Image | undefined;
     const onSuccess = vi.fn().mockImplementation((img) => {
@@ -54,7 +55,9 @@ describe('`imgdl`', () => {
     await expect(fs.access(image!.path)).resolves.toBeUndefined();
   });
 
-  it('should download an image with specific image options', async () => {
+  it('should download an image with specific image options', async ({
+    onTestFinished,
+  }) => {
     const parseImageParamsSpy = vi.spyOn(downloader, 'parseImageParams');
     const url = `${BASE_URL}/image.jpg`;
     const imageOptions = {
@@ -110,7 +113,9 @@ describe('`imgdl`', () => {
     expect(onError).toHaveBeenCalledTimes(1);
   });
 
-  it('should download multiple images if array of URLs is provided', async () => {
+  it('should download multiple images if array of URLs is provided', async ({
+    onTestFinished,
+  }) => {
     const urls = [`${BASE_URL}/img-1.jpg`, `${BASE_URL}/img-2.jpg`];
     const downloadSpy = vi.spyOn(downloader, 'download');
     const images: Image[] = [];
@@ -143,7 +148,9 @@ describe('`imgdl`', () => {
     }
   });
 
-  it('should not throw any error if one of the URLs is invalid, call onError instead', async () => {
+  it('should not throw any error if one of the URLs is invalid, call onError instead', async ({
+    onTestFinished,
+  }) => {
     const urls = [`${BASE_URL}/img-1.jpg`, `${BASE_URL}/unknown`];
     const images: Image[] = [];
     const onSuccess = vi.fn().mockImplementation((image) => images.push(image));
@@ -175,7 +182,9 @@ describe('`imgdl`', () => {
     await expect(fs.access(images[0].path)).resolves.toBeUndefined();
   });
 
-  it('should download multiple images if array of URLs is provided with options', async () => {
+  it('should download multiple images if array of URLs is provided with options', async ({
+    onTestFinished,
+  }) => {
     const urls = [`${BASE_URL}/img-1.jpg`, `${BASE_URL}/img-2.jpg`];
     const parseImageParamsSpy = vi.spyOn(downloader, 'parseImageParams');
     const images: Image[] = [];
@@ -213,11 +222,13 @@ describe('`imgdl`', () => {
     }
   });
 
-  it('should abort download if signal is aborted', async () => {
+  it('should abort download if signal is aborted', async ({
+    onTestFinished,
+  }) => {
     const dir = directory + '/abort-test';
 
     onTestFinished(async () => {
-      await fs.rm(path.resolve(dir), { recursive: true, force: true });
+      await fs.rm(dir, { recursive: true, force: true });
     });
 
     // 30 images
@@ -253,7 +264,9 @@ describe('`imgdl`', () => {
     await expect(fs.access(path.resolve(dir, 'img-30.jpg'))).rejects.toThrow();
   });
 
-  it('should use specific ImageOption for each image url', async () => {
+  it('should use specific ImageOption for each image url', async ({
+    onTestFinished,
+  }) => {
     const images: Image[] = [];
     const onSuccess = vi.fn().mockImplementation((image) => images.push(image));
     const url = `${BASE_URL}/image.jpg`;
@@ -311,7 +324,9 @@ describe('`imgdl`', () => {
     }
   });
 
-  it('should use URL-level options over function-level', async () => {
+  it('should use URL-level options over function-level', async ({
+    onTestFinished,
+  }) => {
     const images: Image[] = [];
     const onSuccess = vi.fn().mockImplementation((image) => images.push(image));
     /**
@@ -369,7 +384,9 @@ describe('`imgdl`', () => {
     }
   });
 
-  it('should accept array of URLs or objects with `url` property', async () => {
+  it('should accept array of URLs or objects with `url` property', async ({
+    onTestFinished,
+  }) => {
     const images: Image[] = [];
     const onSuccess = vi.fn().mockImplementation((image) => images.push(image));
     const onError = vi.fn();
