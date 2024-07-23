@@ -230,11 +230,13 @@ describe('`download`', () => {
     await expect(fs.promises.access(image.path)).resolves.toBeUndefined();
   });
 
-  it('should throw an error if directory cannot be created', async () => {
-    const directory = '/restricted-dir';
-    const image = parseImageParams(`${BASE_URL}/image.jpg`, { directory });
-    await expect(download(image)).rejects.toThrow(DirectoryError);
-  });
+  it.each(['/root', '/restricted-dir'])(
+    'should throw an error if directory cannot be created: `%s`',
+    async (directory) => {
+      const image = parseImageParams(`${BASE_URL}/image.jpg`, { directory });
+      await expect(download(image)).rejects.toThrow(DirectoryError);
+    },
+  );
 
   it.for(['tmp', 'test/tmp'])(
     'should create the directory if it does not exist: `%s`',

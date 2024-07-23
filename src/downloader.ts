@@ -164,15 +164,25 @@ export function parseImageParams(url: string, options?: ImageOptions) {
  * @throws {Error} If there are any other errors.
  */
 export async function download(img: Image, options: DownloadOptions = {}) {
-  // Create the directory if it doesn't exist.
-  if (!fs.existsSync(img.directory)) {
+  // Check if the directory exists and create it if it doesn't
+  try {
+    await fs.promises.access(img.directory);
+  } catch (error) {
     try {
-      fs.mkdirSync(img.directory, { recursive: true });
+      await fs.promises.mkdir(img.directory, { recursive: true });
     } catch (error) {
-      throw new DirectoryError(
-        (error as Error)?.message ?? `Failed to create '${img.directory}'`,
-      );
+      throw new DirectoryError((error as Error).message);
     }
+  }
+
+  // Check if the directory is unrestricted
+  try {
+    await fs.promises.access(
+      img.directory,
+      fs.constants.R_OK | fs.constants.W_OK,
+    );
+  } catch (error) {
+    throw new DirectoryError((error as Error).message);
   }
 
   return await new Promise<Image>((resolve, reject) => {
