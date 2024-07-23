@@ -134,8 +134,9 @@ describe('`imgdl`', () => {
     expect(onError).toHaveBeenCalledTimes(0);
     expect(images).is.an('array').and.toHaveLength(2);
 
-    for (const [i, img] of images.entries()) {
-      expect(img).toStrictEqual({
+    images.sort((a, b) => a.name.localeCompare(b.name));
+    expect(images).toStrictEqual(
+      urls.map((url, i) => ({
         url: new URL(urls[i]),
         originalName: `img-${i + 1}`,
         originalExtension: 'jpg',
@@ -143,7 +144,10 @@ describe('`imgdl`', () => {
         name: `img-${i + 1}`,
         extension: 'jpg',
         path: path.resolve(`img-${i + 1}.jpg`),
-      });
+      })),
+    );
+
+    for (const img of images) {
       await expect(fs.access(img.path)).resolves.toBeUndefined();
     }
   });
@@ -205,19 +209,24 @@ describe('`imgdl`', () => {
     expect(onSuccess).toHaveBeenCalledTimes(2);
     expect(images).is.an('array').and.toHaveLength(2);
 
-    for (const [i, img] of images.entries()) {
-      expect(parseImageParamsSpy).toHaveBeenCalledWith(urls[i], imageOptions);
+    images.sort((a, b) => a.name.localeCompare(b.name));
+    expect(images).toStrictEqual(
+      urls.map((url, i) => {
+        const name = `${imageOptions.name}${i === 0 ? '' : ` (${i})`}`;
 
-      const name = `${imageOptions.name}${i === 0 ? '' : ` (${i})`}`;
-      expect(img).toStrictEqual({
-        url: new URL(urls[i]),
-        originalName: `img-${i + 1}`,
-        originalExtension: 'jpg',
-        directory,
-        name,
-        extension: imageOptions.extension,
-        path: path.resolve(directory, `${name}.png`),
-      });
+        return {
+          url: new URL(urls[i]),
+          originalName: `img-${i + 1}`,
+          originalExtension: 'jpg',
+          directory,
+          name,
+          extension: imageOptions.extension,
+          path: path.resolve(directory, `${name}.png`),
+        };
+      }),
+    );
+
+    for (const img of images) {
       await expect(fs.access(img.path)).resolves.toBeUndefined();
     }
   });
@@ -294,7 +303,9 @@ describe('`imgdl`', () => {
 
     await expect(imgdl(sources, { onSuccess })).resolves.toBeUndefined();
     expect(onSuccess).toHaveBeenCalledTimes(sources.length);
-    expect(images.sort((a, b) => a.path.localeCompare(b.path))).toStrictEqual([
+
+    images.sort((a, b) => a.path.localeCompare(b.path));
+    expect(images).toStrictEqual([
       {
         ...defaultExpected,
         extension: 'png',
@@ -360,7 +371,9 @@ describe('`imgdl`', () => {
 
     await expect(imgdl(sources, options)).resolves.toBeUndefined();
     expect(onSuccess).toHaveBeenCalledTimes(sources.length);
-    expect(images.sort((a, b) => a.path.localeCompare(b.path))).toStrictEqual([
+
+    images.sort((a, b) => a.path.localeCompare(b.path));
+    expect(images).toStrictEqual([
       {
         ...defaultExpected,
         extension: 'webp',
