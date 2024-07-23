@@ -170,13 +170,13 @@ async function bootstrap() {
   const headers: Options['headers'] = {};
   if (flags.header) {
     flags.header.forEach((header) => {
-      const [name, value] = header.split(':');
+      const [name, value] = header.split(':').map((part) => part.trim());
 
       if (!name || !value) {
         throw new ArgumentError('Invalid header format');
       }
 
-      headers[name.trim()] = value.trim();
+      headers[name] = value;
     });
   }
 
@@ -188,35 +188,37 @@ async function bootstrap() {
     abortController.abort();
   });
 
-  await imgdl(urls.length === 1 ? urls[0] : urls, {
-    directory: flags.dir,
-    name: flags.name,
-    extension: flags.ext,
-    headers,
-    interval: flags.interval,
-    onSuccess: () => {
-      if (!flags.silent) {
+  await new Promise<void>((resolve, rejects) => {
+    imgdl(urls, {
+      directory: flags.dir,
+      name: flags.name,
+      extension: flags.ext,
+      headers,
+      interval: flags.interval,
+      onSuccess: () => {
         success += 1;
-        bar.increment({ success });
-      }
-    },
-    onError: (error, url) => {
-      errorCount += 1;
-      if (!flags.silent) {
-        bar.increment({ errorCount });
-      }
-      if (error instanceof ArgumentError || error instanceof DirectoryError) {
-        throw error;
-      }
-      fs.appendFileSync(
-        path.resolve(flags.dir || process.cwd(), 'error.log'),
-        `${new Date().toISOString()} failed download from ${url}, ${error.name}: ${error.message}\n`,
-      );
-    },
-    maxRetry: flags.maxRetry,
-    step: flags.step,
-    timeout: flags.timeout,
-    signal: abortController.signal,
+        if (!flags.silent) {
+          bar.increment({ success });
+        }
+      },
+      onError: (error, url) => {
+        errorCount += 1;
+        if (!flags.silent) {
+          bar.increment({ errorCount });
+        }
+        if (error instanceof ArgumentError || error instanceof DirectoryError) {
+          return rejects(error);
+        }
+        fs.appendFileSync(
+          path.resolve(flags.dir || process.cwd(), 'error.log'),
+          `${new Date().toISOString()} failed download from ${url}, ${error.name}: ${error.message}\n`,
+        );
+      },
+      maxRetry: flags.maxRetry,
+      step: flags.step,
+      timeout: flags.timeout,
+      signal: abortController.signal,
+    });
   });
 
   if (!flags.silent) {
@@ -226,7 +228,7 @@ async function bootstrap() {
     if (errorCount) {
       console.log(
         errorLog(
-          `${errorCount} image${errorCount > 1 ? 's' : ''} failed to download. See ./error.log for details.`,
+          `${errorCount} image${errorCount > 1 ? 's' : ''} failed to download. See error.log for details.`,
         ),
       );
     }
@@ -235,5 +237,4 @@ async function bootstrap() {
 
 bootstrap().catch((error: Error) => {
   console.error(errorLog(`\n${error.name}: ${error.message}`));
-  process.exit(1);
 });

@@ -15,6 +15,7 @@ import { BASE_URL } from './fixtures/mocks/handlers.js';
 import * as downloader from '~/downloader.js';
 import path from 'node:path';
 import DirectoryError from '~/errors/DirectoryError.js';
+import ArgumentError from '~/errors/ArgumentError.js';
 
 describe('`imgdl`', () => {
   /**
@@ -103,14 +104,23 @@ describe('`imgdl`', () => {
     expect(error).toBeInstanceOf(DirectoryError);
   });
 
-  it('should not throw any error if URL is invalid', async () => {
-    const url = `${BASE_URL}/unknown`;
+  it.each([
+    'not-url',
+    'some/path',
+    'example.com/image.jpg',
+    'ftp://example.com',
+    'ws://example.com',
+  ])('should not throw any error if URL is invalid', async (url) => {
+    let error: Error | undefined;
     const onSuccess = vi.fn();
-    const onError = vi.fn();
+    const onError = vi.fn().mockImplementation((err) => {
+      error = err;
+    });
 
     await expect(imgdl(url, { onSuccess, onError })).resolves.toBeUndefined();
     expect(onSuccess).toHaveBeenCalledTimes(0);
     expect(onError).toHaveBeenCalledTimes(1);
+    expect(error).toBeInstanceOf(ArgumentError);
   });
 
   it('should download multiple images if array of URLs is provided', async ({
