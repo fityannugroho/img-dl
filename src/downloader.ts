@@ -99,10 +99,9 @@ export function parseImageParams(url: string, options?: ImageOptions) {
     path: '',
   };
 
-  // Validate the directory path syntax and ensure it is a directory without a filename.
-  const { base, name: nameFromPath } = path.parse(img.directory);
-  if (base !== nameFromPath) {
-    throw new ArgumentError('`directory` cannot contain filename');
+  // Ensure the directory doesn't contains file extension.
+  if (path.extname(img.directory) !== '') {
+    throw new ArgumentError('`directory` cannot contains file extension');
   }
 
   // Set name
