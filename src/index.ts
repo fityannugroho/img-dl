@@ -106,23 +106,24 @@ async function imgdl(
     const { url: imgUrl, ...imgOptions } =
       typeof _url === 'string' ? { url: _url } : _url;
 
-    const img = parseImageParams(imgUrl, {
-      directory: imgOptions.directory || directory,
-      name: imgOptions.name || name,
-      extension: imgOptions.extension || extension,
-    });
-
-    // Make sure the name is unique in the destination directory
-    const nameKey = `${img.directory}/${img.name}.${img.extension}`;
-    const count = countNames.get(nameKey);
-    if (count) {
-      img.name = `${img.name} (${count})`;
-      img.path = path.resolve(img.directory, `${img.name}.${img.extension}`);
-    }
-    countNames.set(nameKey, (count || 0) + 1);
-
-    // Add the download task to queue
     try {
+      // Validate and parse the image parameters
+      const img = parseImageParams(imgUrl, {
+        directory: imgOptions.directory || directory,
+        name: imgOptions.name || name,
+        extension: imgOptions.extension || extension,
+      });
+
+      // Make sure the name is unique in the destination directory
+      const nameKey = `${img.directory}/${img.name}.${img.extension}`;
+      const count = countNames.get(nameKey);
+      if (count) {
+        img.name = `${img.name} (${count})`;
+        img.path = path.resolve(img.directory, `${img.name}.${img.extension}`);
+      }
+      countNames.set(nameKey, (count || 0) + 1);
+
+      // Add the download task to queue
       const image = await queue.add(
         ({ signal }) => download(img, { ...downloadOptions, signal }),
         { signal: downloadOptions?.signal },
@@ -132,12 +133,7 @@ async function imgdl(
         onSuccess?.(image);
       }
     } catch (error) {
-      onError?.(
-        error instanceof Error
-          ? error
-          : new Error('Unknown error', { cause: error }),
-        imgUrl,
-      );
+      onError?.(error as Error, imgUrl);
     }
   });
 
