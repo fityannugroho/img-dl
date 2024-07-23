@@ -7,6 +7,11 @@ export default tseslint.config(
   ...tseslint.configs.strict,
   eslintPrettier,
   {
-    ignores: ['node_modules/**/*', 'dist/**/*', 'coverage/*/*'],
+    ignores: [
+      'node_modules/**/*',
+      'dist/**/*',
+      'coverage/*/*',
+      'pnpm-lock.yaml',
+    ],
   },
 );

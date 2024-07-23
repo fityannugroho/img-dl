@@ -18,7 +18,7 @@
     "test:watch": "vitest",
     "test:cov": "vitest run --coverage",
     "build": "tsup src/index.ts src/cli.ts --format esm -d dist --clean --dts src/index.ts --sourcemap --minify",
-    "prepublish": "npm run build"
+    "prepublish": "pnpm run build"
   },
   "repository": {
     "type": "git",
