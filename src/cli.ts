@@ -218,7 +218,7 @@ async function bootstrap() {
       step: flags.step,
       timeout: flags.timeout,
       signal: abortController.signal,
-    });
+    }).then(resolve, rejects);
   });
 
   if (!flags.silent) {

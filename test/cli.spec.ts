@@ -1,7 +1,10 @@
+import chalk from 'chalk';
 import { $ } from 'execa';
+import got from 'got';
+import fs from 'node:fs/promises';
 import { beforeAll, describe, expect, it } from 'vitest';
 
-describe('cli', () => {
+describe('cli', async () => {
   /**
    * The build folder for the test
    */
@@ -9,7 +12,28 @@ describe('cli', () => {
   /**
    * A valid URL for testing.
    */
-  const testUrl = 'http://example.com/image.webp';
+  const testUrl = 'https://picsum.photos/200/300.jpg';
+
+  // Check connection to the image server
+  let unconnected = true;
+  try {
+    console.log('Checking connection...');
+
+    const res = await got(testUrl, {
+      retry: { limit: 0 },
+    });
+
+    if (res.statusCode !== 200) {
+      throw new Error('Status code is not 200');
+    }
+
+    unconnected = false;
+    console.log(chalk.green('Connection is OK'));
+  } catch {
+    console.log(
+      chalk.yellow('No connection to the image server. Skipping some tests!'),
+    );
+  }
 
   beforeAll(async () => {
     await $`tsup src/cli.ts --format esm -d ${dist} --clean`;
@@ -33,17 +57,55 @@ describe('cli', () => {
     expect(stdout).contains('USAGE').contains('PARAMETERS').contains('OPTIONS');
   });
 
+  it.skipIf(unconnected)(
+    'should download the file to the current directory',
+    { timeout: 10_000 },
+    async ({ onTestFinished }) => {
+      const { stdout } = await $`node ${dist}/cli.js ${testUrl} --name=photo`;
+
+      onTestFinished(async () => {
+        await fs.rm('photo.jpg', { force: true });
+      });
+
+      expect(stdout).contain('Done').not.contain('image failed to download');
+      await expect(fs.access('photo.jpg')).resolves.toBeUndefined();
+    },
+  );
+
   it('should throw an error if the directory cannot be created', async () => {
     const { stderr } = await $`node ${dist}/cli.js ${testUrl} --dir=/root`;
-    expect(stderr).toContain('DirectoryError');
+    expect(stderr).contain('DirectoryError');
   });
 
   it('should throw an error if some arguments is invalid', async () => {
     const { stderr } =
       await $`node ${dist}/cli.js ${testUrl} --name=invalid/name`;
 
-    expect(stderr).toContain('ArgumentError');
+    expect(stderr).contain('ArgumentError');
   });
+
+  it.skipIf(unconnected)(
+    'should download multiple images if multiple URLs are provided',
+    { timeout: 10_000 },
+    async ({ onTestFinished }) => {
+      const { stdout } =
+        await $`node ${dist}/cli.js ${testUrl} ${testUrl} --name=photo`;
+
+      const expectedImages = ['photo.jpg', 'photo (1).jpg'];
+
+      onTestFinished(async () => {
+        for (const image of expectedImages) {
+          await fs.rm(image, { force: true });
+        }
+      });
+
+      expect(stdout).contain('Done').not.contain('images failed to download');
+
+      for (const image of expectedImages) {
+        await expect(fs.access(image)).resolves.toBeUndefined();
+      }
+    },
+  );
 
   it.each([
     'not-url',
@@ -53,7 +115,7 @@ describe('cli', () => {
     'ws://example.com',
   ])('should throw an error if URL is invalid: `%s`', async (url) => {
     const { stderr } = await $`node ${dist}/cli.js ${url}`;
-    expect(stderr).toContain('ArgumentError');
+    expect(stderr).contain('ArgumentError');
   });
 
   it.each([
@@ -66,34 +128,61 @@ describe('cli', () => {
     'should throw an error if the header is not valid: `%s`',
     async (header) => {
       const { stderr } = await $`node ${dist}/cli.js ${testUrl} -H ${header}`;
-      expect(stderr).toContain('ArgumentError');
+      expect(stderr).contain('ArgumentError');
     },
   );
 
   describe('Increment mode', () => {
-    const testUrl = 'http://example.com/image-{i}.webp';
+    const testUrl = 'http://picsum.photos/id/{i}/200/300.webp';
+
+    it.skipIf(unconnected)(
+      'should download multiple images in increment mode',
+      { timeout: 10_000 },
+      async ({ onTestFinished }) => {
+        const { stdout } =
+          await $`node ${dist}/cli.js ${testUrl} --increment --end=2 --name=photo`;
+
+        const expectedImages = [
+          'photo.webp',
+          'photo (1).webp',
+          'photo (2).webp',
+        ];
+
+        onTestFinished(async () => {
+          for (const image of expectedImages) {
+            await fs.rm(image, { force: true });
+          }
+        });
+
+        expect(stdout).contain('Done').not.contain('image failed to download');
+
+        for (const image of expectedImages) {
+          await expect(fs.access(image)).resolves.toBeUndefined();
+        }
+      },
+    );
 
     it('should throw an error if the end index is not specified', async () => {
       const { stderr } = await $`node ${dist}/cli.js ${testUrl} --increment`;
-      expect(stderr).toContain('ArgumentError');
+      expect(stderr).contain('ArgumentError');
     });
 
     it('should throw an error if URL more than 1', async () => {
       const { stderr } =
         await $`node ${dist}/cli.js ${testUrl} ${testUrl} --increment --end=10`;
-      expect(stderr).toContain('ArgumentError');
+      expect(stderr).contain('ArgumentError');
     });
 
     it('should throw an error if the start index is greater than the end index', async () => {
       const { stderr } =
         await $`node ${dist}/cli.js ${testUrl} --increment --start=2 --end=1`;
-      expect(stderr).toContain('ArgumentError');
+      expect(stderr).contain('ArgumentError');
     });
 
     it('should throw an error if the URL does not contain the index placeholder', async () => {
       const { stderr } =
-        await $`node ${dist}/cli.js http://example.com/image.jpg --increment --end=10`;
-      expect(stderr).toContain('ArgumentError');
+        await $`node ${dist}/cli.js http://picsum.photos/200/300 --increment --end=10`;
+      expect(stderr).contain('ArgumentError');
     });
   });
 });
