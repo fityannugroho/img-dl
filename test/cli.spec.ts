@@ -3,6 +3,62 @@ import { $ } from 'execa';
 import got from 'got';
 import fs from 'node:fs/promises';
 import { beforeAll, describe, expect, it } from 'vitest';
+import { generateDownloadUrls } from '~/utils.js';
+import ArgumentError from '~/errors/ArgumentError.js';
+
+describe('generateDownloadUrls', () => {
+  it('return the same URLs if increment flag is not set', () => {
+    const urls = [
+      'https://example.com/image1.jpg',
+      'https://example.com/image2.jpg',
+    ];
+    const flags = {};
+
+    expect(generateDownloadUrls(urls, flags)).toEqual(urls);
+  });
+
+  it('throw error if multiple URLs are provided', () => {
+    const urls = [
+      'https://example.com/image1.jpg',
+      'https://example.com/image2.jpg',
+    ];
+    const flags = { increment: true };
+
+    expect(() => generateDownloadUrls(urls, flags)).toThrow(ArgumentError);
+  });
+
+  it('throw error if URL does not contain {i} placeholder', () => {
+    const urls = ['https://example.com/image.jpg'];
+    const flags = { increment: true };
+
+    expect(() => generateDownloadUrls(urls, flags)).toThrow(ArgumentError);
+  });
+
+  it('throw error if start is less than 0', () => {
+    const urls = ['https://example.com/image{i}.jpg'];
+    const flags = { increment: true, start: -1 };
+
+    expect(() => generateDownloadUrls(urls, flags)).toThrow(ArgumentError);
+  });
+
+  it('throw error if start is greater than end', () => {
+    const urls = ['https://example.com/image{i}.jpg'];
+    const flags = { increment: true, start: 5, end: 3 };
+
+    expect(() => generateDownloadUrls(urls, flags)).toThrow(ArgumentError);
+  });
+
+  it('returns a list of generated URLs', () => {
+    const urls = ['https://example.com/image{i}.jpg'];
+    const flags = { increment: true, start: 1, end: 3 };
+
+    expect(generateDownloadUrls(urls, flags)).toEqual([
+      'https://example.com/image1.jpg',
+      'https://example.com/image2.jpg',
+      'https://example.com/image3.jpg',
+    ]);
+  });
+});
 
 describe('cli', async () => {
   /**
@@ -161,11 +217,6 @@ describe('cli', async () => {
         }
       },
     );
-
-    it('should throw an error if the end index is not specified', async () => {
-      const { stderr } = await $`node ${dist}/cli.js ${testUrl} --increment`;
-      expect(stderr).contain('ArgumentError');
-    });
 
     it('should throw an error if URL more than 1', async () => {
       const { stderr } =
