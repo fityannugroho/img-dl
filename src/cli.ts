@@ -8,6 +8,7 @@ import chalk from 'chalk';
 import ArgumentError from './errors/ArgumentError.js';
 import DirectoryError from './errors/DirectoryError.js';
 import imgdl, { Options } from './index.js';
+import { generateDownloadUrls } from './utils.js';
 
 const cli = meow(
   `
@@ -21,7 +22,7 @@ const cli = meow(
 
   OPTIONS
     -d, --dir=<path>          The output directory. Default: current working directory
-        --end=<number>        The end index. Required in increment mode
+        --end=<number>        The end index for increment mode. Default: 0
     -e, --ext=<ext>           The file extension. Default: original extension or jpg
     -h, --help                Show this help message
     -H, --header=<header>     The header to send with the request. Can be used multiple times
@@ -104,8 +105,8 @@ const warningLog = chalk.yellow;
 const dimLog = chalk.dim;
 
 async function bootstrap() {
-  let urls = cli.input;
   const { flags } = cli;
+  const urls = generateDownloadUrls(cli.input, flags);
 
   if (flags.version) {
     cli.showVersion();
@@ -113,37 +114,6 @@ async function bootstrap() {
 
   if (!urls.length) {
     cli.showHelp(0);
-  }
-
-  if (flags.increment) {
-    if (urls.length > 1) {
-      throw new ArgumentError('Only one URL is allowed in increment mode');
-    }
-
-    const templateUrl = urls[0];
-
-    if (!templateUrl.includes('{i}')) {
-      throw new ArgumentError(
-        'The URL must contain {i} placeholder for the index',
-      );
-    }
-
-    if (!flags.end) {
-      throw new ArgumentError('The end index is required in increment mode');
-    }
-
-    if (flags.start && flags.start > flags.end) {
-      throw new ArgumentError(
-        'The start index cannot be greater than the end index',
-      );
-    }
-
-    const { start = 0, end } = flags;
-    urls = [];
-
-    for (let i = start; i <= end; i += 1) {
-      urls.push(templateUrl.replace('{i}', i.toString()));
-    }
   }
 
   if (!flags.silent) {
