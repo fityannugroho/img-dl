@@ -158,49 +158,55 @@ async function bootstrap() {
     abortController.abort();
   });
 
-  await new Promise<void>((resolve, rejects) => {
-    imgdl(urls, {
-      directory: flags.dir,
-      name: flags.name,
-      extension: flags.ext,
-      headers,
-      interval: flags.interval,
-      onSuccess: () => {
-        success += 1;
-        if (!flags.silent) {
-          bar.increment({ success });
-        }
-      },
-      onError: (error, url) => {
-        errorCount += 1;
-        if (!flags.silent) {
-          bar.increment({ errorCount });
-        }
-        if (error instanceof ArgumentError || error instanceof DirectoryError) {
-          return rejects(error);
-        }
-        fs.appendFileSync(
-          path.resolve(flags.dir || process.cwd(), 'error.log'),
-          `${new Date().toISOString()} failed download from ${url}, ${error.name}: ${error.message}\n`,
+  try {
+    await new Promise<void>((resolve, rejects) => {
+      imgdl(urls, {
+        directory: flags.dir,
+        name: flags.name,
+        extension: flags.ext,
+        headers,
+        interval: flags.interval,
+        onSuccess: () => {
+          success += 1;
+          if (!flags.silent) {
+            bar.increment({ success });
+          }
+        },
+        onError: (error, url) => {
+          if (
+            error instanceof ArgumentError ||
+            error instanceof DirectoryError
+          ) {
+            return rejects(error);
+          }
+
+          errorCount += 1;
+          if (!flags.silent) {
+            bar.increment({ errorCount });
+          }
+          fs.appendFileSync(
+            path.resolve(flags.dir || process.cwd(), 'error.log'),
+            `${new Date().toISOString()} failed download from ${url}, ${error.name}: ${error.message}\n`,
+          );
+        },
+        maxRetry: flags.maxRetry,
+        step: flags.step,
+        timeout: flags.timeout,
+        signal: abortController.signal,
+      }).then(resolve, rejects);
+    });
+  } finally {
+    if (!flags.silent) {
+      bar.stop();
+      console.log(dimLog('Done!'));
+
+      if (errorCount) {
+        console.log(
+          errorLog(
+            `${errorCount} image${errorCount > 1 ? 's' : ''} failed to download. See error.log for details.`,
+          ),
         );
-      },
-      maxRetry: flags.maxRetry,
-      step: flags.step,
-      timeout: flags.timeout,
-      signal: abortController.signal,
-    }).then(resolve, rejects);
-  });
-
-  if (!flags.silent) {
-    bar.stop();
-    console.log(dimLog('Done!'));
-
-    if (errorCount) {
-      console.log(
-        errorLog(
-          `${errorCount} image${errorCount > 1 ? 's' : ''} failed to download. See error.log for details.`,
-        ),
-      );
+      }
     }
   }
 }
