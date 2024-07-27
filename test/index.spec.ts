@@ -16,6 +16,7 @@ import * as downloader from '~/downloader.js';
 import path from 'node:path';
 import DirectoryError from '~/errors/DirectoryError.js';
 import ArgumentError from '~/errors/ArgumentError.js';
+import { DEFAULT_EXTENSION, DEFAULT_NAME } from '~/constanta.js';
 
 describe('`imgdl`', () => {
   /**
@@ -32,28 +33,39 @@ describe('`imgdl`', () => {
   it('should download an image if single URL is provided', async ({
     onTestFinished,
   }) => {
-    const url = `${BASE_URL}/image.jpg`;
-    let image: Image | undefined;
-    const onSuccess = vi.fn().mockImplementation((img) => {
-      image = img;
+    const url = `${BASE_URL}/image`;
+    const expectedPath = path.resolve(`${DEFAULT_NAME}.${DEFAULT_EXTENSION}`);
+
+    onTestFinished(async () => {
+      await fs.rm(expectedPath, { force: true });
+    });
+
+    await expect(imgdl(url)).resolves.toBeUndefined();
+    await expect(fs.access(expectedPath)).resolves.toBeUndefined();
+  });
+
+  it('use default value of image options if not provided', async ({
+    onTestFinished,
+  }) => {
+    const url = `${BASE_URL}/image`;
+    const image = await new Promise<Image>((resolve, rejects) => {
+      imgdl(url, { onSuccess: resolve, onError: rejects });
     });
 
     onTestFinished(async () => {
-      await fs.rm(image!.path, { force: true });
+      await fs.rm(image.path, { force: true });
     });
 
-    await expect(imgdl(url, { onSuccess })).resolves.toBeUndefined();
-    expect(onSuccess).toHaveBeenCalledTimes(1);
     expect(image).toStrictEqual({
       url: new URL(url),
-      name: 'image',
-      extension: 'jpg',
+      originalName: undefined,
+      originalExtension: undefined,
       directory: process.cwd(),
-      originalName: 'image',
-      originalExtension: 'jpg',
-      path: path.resolve('image.jpg'),
+      name: DEFAULT_NAME,
+      extension: DEFAULT_EXTENSION,
+      path: path.join(image.directory, `${image.name}.${image.extension}`),
     });
-    await expect(fs.access(image!.path)).resolves.toBeUndefined();
+    await expect(fs.access(image.path)).resolves.toBeUndefined();
   });
 
   it('should download an image with specific image options', async ({
@@ -82,8 +94,9 @@ describe('`imgdl`', () => {
       url: new URL(url),
       originalName: 'image',
       originalExtension: 'jpg',
-      path: path.resolve(
-        imageOptions.directory,
+      directory: path.resolve(imageOptions.directory),
+      path: path.join(
+        image.directory,
         `${imageOptions.name}.${imageOptions.extension}`,
       ),
     });
@@ -228,10 +241,10 @@ describe('`imgdl`', () => {
           url: new URL(urls[i]),
           originalName: `img-${i + 1}`,
           originalExtension: 'jpg',
-          directory,
+          directory: path.resolve(imageOptions.directory),
           name,
           extension: imageOptions.extension,
-          path: path.resolve(directory, `${name}.png`),
+          path: path.resolve(imageOptions.directory, `${name}.png`),
         };
       }),
     );
@@ -323,14 +336,14 @@ describe('`imgdl`', () => {
       },
       {
         ...defaultExpected,
-        directory: 'images',
+        directory: path.resolve('images'),
         path: path.resolve('images', 'image.jpg'),
       },
       {
         ...defaultExpected,
         name: 'myimage',
         extension: 'png',
-        directory: 'images',
+        directory: path.resolve('images'),
         path: path.resolve('images', 'myimage.png'),
       },
       {
@@ -391,7 +404,7 @@ describe('`imgdl`', () => {
       },
       {
         ...defaultExpected,
-        directory: 'avatars',
+        directory: path.resolve('avatars'),
         path: path.resolve('avatars', 'avatar.png'),
       },
       {

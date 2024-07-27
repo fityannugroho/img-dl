@@ -244,7 +244,10 @@ The output directory.
 Type: `string`<br>
 Default: `'jpg'`
 
-The file extension. If not specified, the original extension will be used. If the original extension is not available, 'jpg' will be used.
+The image extension. The extension must be any of [`sharp` supported formats](https://sharp.pixelplumbing.com/#formats).
+If not specified, the original extension will be used.
+
+If the original extension is not available, 'jpg' will be used.
 
 ##### `headers`
 
