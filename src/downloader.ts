@@ -102,9 +102,7 @@ export function parseImageParams(url: string, options?: ImageOptions) {
     url: validUrl,
     name: '',
     extension: '',
-    directory: options?.directory
-      ? path.normalize(options.directory)
-      : process.cwd(),
+    directory: path.resolve(options?.directory || '.'),
     originalName:
       originalExt === ''
         ? undefined
@@ -144,7 +142,7 @@ export function parseImageParams(url: string, options?: ImageOptions) {
 
   // Make sure the path is unique, if not, add a number to the end of the name.
   while (
-    fs.existsSync(path.resolve(img.directory, `${img.name}.${img.extension}`))
+    fs.existsSync(path.join(img.directory, `${img.name}.${img.extension}`))
   ) {
     const match = img.name.match(/ \((\d+)\)$/);
     const num = match ? parseInt(match[1], 10) + 1 : 1;
@@ -152,7 +150,7 @@ export function parseImageParams(url: string, options?: ImageOptions) {
   }
 
   // Set path
-  img.path = path.resolve(img.directory, `${img.name}.${img.extension}`);
+  img.path = path.join(img.directory, `${img.name}.${img.extension}`);
 
   return img;
 }

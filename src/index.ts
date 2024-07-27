@@ -23,7 +23,7 @@ export type Image = {
    */
   extension: string;
   /**
-   * The directory to save the image to. Can be relative or absolute.
+   * The path of the directory where the image is saved.
    */
   directory: string;
   /**

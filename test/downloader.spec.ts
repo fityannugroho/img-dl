@@ -2,15 +2,7 @@ import { fileTypeFromFile } from 'file-type';
 import { RequestError } from 'got';
 import fs from 'node:fs';
 import path from 'node:path';
-import {
-  afterAll,
-  afterEach,
-  beforeAll,
-  describe,
-  expect,
-  it,
-  vi,
-} from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { DEFAULT_EXTENSION, DEFAULT_NAME } from '~/constanta.js';
 import { download, parseImageParams } from '~/downloader.js';
 import ArgumentError from '~/errors/ArgumentError.js';
@@ -85,20 +77,20 @@ describe('parseImageParams', () => {
     });
 
     it.each([
-      ['images', 'images'],
-      ['images/', 'images/'],
-      ['images/me', 'images/me'],
-      ['images/me/', 'images/me/'],
-      ['.', '.'],
-      ['./images', 'images'],
-      ['./images/', 'images/'],
-      ['test/../images', 'images'],
-      ['test/../images/', 'images/'],
-    ])('return the normalized directory: `%s`', (dir, expectedDir) => {
+      'images',
+      'images/',
+      'images/me',
+      'images/me/',
+      '.',
+      './images',
+      './images/',
+      'test/../images',
+      'test/../images/',
+    ])('return the path of directory: `%s`', (directory) => {
       const url = 'https://example.com/image.jpg';
-      const result = parseImageParams(url, { directory: dir });
-      expect(result.directory).toBe(expectedDir);
-      expect(result.path).toBe(path.resolve(expectedDir, 'image.jpg'));
+      const result = parseImageParams(url, { directory });
+      expect(result.directory).toBe(path.resolve(directory));
+      expect(result.path).toBe(path.join(result.directory, 'image.jpg'));
     });
   });
 
@@ -210,17 +202,23 @@ describe('parseImageParams', () => {
       },
     );
 
-    it('generate a unique name if file path already exists', () => {
+    it('generate suffix name if file path already exists', ({
+      onTestFinished,
+    }) => {
       const url = 'https://example.com/image.jpg';
       const options = { directory: 'images/me' };
 
-      const existsSyncSpyOn = vi.spyOn(fs, 'existsSync');
-      existsSyncSpyOn.mockImplementationOnce((filePath) => {
-        return filePath === path.resolve('images/me', 'image.jpg');
+      fs.mkdirSync(options.directory, { recursive: true });
+
+      onTestFinished(() => {
+        fs.rmSync(options.directory, { recursive: true, force: true });
       });
 
-      const result = parseImageParams(url, options);
-      expect(result.name).toBe('image (1)');
+      fs.writeFileSync(path.resolve(options.directory, 'image.jpg'), '');
+      expect(parseImageParams(url, options).name).toBe('image (1)');
+
+      fs.writeFileSync(path.resolve(options.directory, 'image (1).jpg'), '');
+      expect(parseImageParams(url, options).name).toBe('image (2)');
     });
   });
 });
