@@ -53,7 +53,7 @@ importers:
         version: 9.3.0
       file-type:
         specifier: ^19.3.0
-        version: 19.3.0
+        version: 19.4.0
       msw:
         specifier: ^2.3.1
         version: 2.3.5(typescript@5.5.4)
@@ -1127,8 +1127,8 @@ packages:
     resolution: {integrity: sha512-7Gps/XWymbLk2QLYK4NzpMOrYjMhdIxXuIvy2QBsLE6ljuodKvdkWs/cpyJJ3CVIVpH0Oi1Hvg1ovbMzLdFBBg==}
     engines: {node: ^10.12.0 || >=12.0.0}
 
-  file-type@19.3.0:
-    resolution: {integrity: sha512-mROwiKLZf/Kwa/2Rol+OOZQn1eyTkPB3ZTwC0ExY6OLFCbgxHYZvBm7xI77NvfZFMKBsmuXfmLJnD4eEftEhrA==}
+  file-type@19.4.0:
+    resolution: {integrity: sha512-7N7Pu0UzVYV8YP6WXhN+kcvtp/P00eWKVo76nMAK+RasRO/ICzuJzjoG+aSLqbY6khDAFQuqsyImGaSdkm49Iw==}
     engines: {node: '>=18'}
 
   fill-range@7.1.1:
@@ -3032,8 +3032,9 @@ snapshots:
     dependencies:
       flat-cache: 3.2.0
 
-  file-type@19.3.0:
+  file-type@19.4.0:
     dependencies:
+      get-stream: 9.0.1
       strtok3: 8.0.1
       token-types: 6.0.0
       uint8array-extras: 1.4.0
