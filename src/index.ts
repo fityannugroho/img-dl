@@ -96,12 +96,12 @@ async function imgdl(
 
   // Set max listeners to infinity to prevent memory leak warning
   if (downloadOptions?.signal) {
-    setMaxListeners(Infinity, downloadOptions.signal);
+    setMaxListeners(Number.POSITIVE_INFINITY, downloadOptions.signal);
   }
 
   const countNames = new Map<string, number>();
 
-  urls.forEach(async (_url) => {
+  for (const _url of urls) {
     // Get image URL and options
     const { url: imgUrl, ...imgOptions } =
       typeof _url === 'string' ? { url: _url } : _url;
@@ -135,7 +135,7 @@ async function imgdl(
     } catch (error) {
       onError?.(error as Error, imgUrl);
     }
-  });
+  }
 
   await queue.onIdle();
 }

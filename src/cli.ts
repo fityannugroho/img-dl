@@ -7,7 +7,7 @@ import cliProgress from 'cli-progress';
 import meow from 'meow';
 import ArgumentError from './errors/ArgumentError.js';
 import DirectoryError from './errors/DirectoryError.js';
-import imgdl, { Options } from './index.js';
+import imgdl, { type Options } from './index.js';
 import { generateDownloadUrls } from './utils.js';
 
 const cli = meow(
@@ -138,7 +138,7 @@ async function bootstrap() {
   // Validate and convert headers
   const headers: Options['headers'] = {};
   if (flags.header) {
-    flags.header.forEach((header) => {
+    for (const header of flags.header) {
       const [name, value] = header.split(':').map((part) => part.trim());
 
       if (!name || !value) {
@@ -146,7 +146,7 @@ async function bootstrap() {
       }
 
       headers[name] = value;
-    });
+    }
   }
 
   const abortController = new AbortController();

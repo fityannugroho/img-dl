@@ -1,9 +1,9 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { pipeline } from 'node:stream/promises';
-import got, { PlainResponse } from 'got';
+import got, { type PlainResponse } from 'got';
 import sanitize from 'sanitize-filename';
-import sharp, { FormatEnum } from 'sharp';
+import sharp, { type FormatEnum } from 'sharp';
 import {
   DEFAULT_EXTENSION,
   DEFAULT_NAME,
@@ -11,7 +11,7 @@ import {
 } from './constanta.js';
 import ArgumentError from './errors/ArgumentError.js';
 import DirectoryError from './errors/DirectoryError.js';
-import { Image } from './index.js';
+import type { Image } from './index.js';
 
 export type ImageOptions = {
   /**
@@ -145,8 +145,8 @@ export function parseImageParams(url: string, options?: ImageOptions) {
     fs.existsSync(path.join(img.directory, `${img.name}.${img.extension}`))
   ) {
     const match = img.name.match(/ \((\d+)\)$/);
-    const num = match ? parseInt(match[1], 10) + 1 : 1;
-    img.name = img.name.replace(/ \(\d+\)$/, '') + ` (${num})`;
+    const num = match ? Number.parseInt(match[1], 10) + 1 : 1;
+    img.name = `${img.name.replace(/ \(\d+\)$/, '')} (${num})`;
   }
 
   // Set path
