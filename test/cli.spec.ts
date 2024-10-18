@@ -1,10 +1,10 @@
+import fs from 'node:fs/promises';
 import chalk from 'chalk';
 import { $ } from 'execa';
 import got from 'got';
-import fs from 'node:fs/promises';
 import { beforeAll, describe, expect, it } from 'vitest';
-import { generateDownloadUrls } from '~/utils.js';
 import ArgumentError from '~/errors/ArgumentError.js';
+import { generateDownloadUrls } from '~/utils.js';
 
 describe('generateDownloadUrls', () => {
   it('return the same URLs if increment flag is not set', () => {

@@ -1,5 +1,5 @@
-/* eslint-disable @typescript-eslint/no-non-null-assertion */
 import fs from 'node:fs/promises';
+import path from 'node:path';
 import {
   afterAll,
   afterEach,
@@ -9,14 +9,13 @@ import {
   it,
   vi,
 } from 'vitest';
-import imgdl, { Image } from '~/index.js';
-import { server } from './fixtures/mocks/node.js';
-import { BASE_URL } from './fixtures/mocks/handlers.js';
-import * as downloader from '~/downloader.js';
-import path from 'node:path';
-import DirectoryError from '~/errors/DirectoryError.js';
-import ArgumentError from '~/errors/ArgumentError.js';
 import { DEFAULT_EXTENSION, DEFAULT_NAME } from '~/constanta.js';
+import * as downloader from '~/downloader.js';
+import ArgumentError from '~/errors/ArgumentError.js';
+import DirectoryError from '~/errors/DirectoryError.js';
+import imgdl, { type Image } from '~/index.js';
+import { BASE_URL } from './fixtures/mocks/handlers.js';
+import { server } from './fixtures/mocks/node.js';
 
 describe('`imgdl`', () => {
   /**
@@ -160,7 +159,7 @@ describe('`imgdl`', () => {
     images.sort((a, b) => a.name.localeCompare(b.name));
     expect(images).toStrictEqual(
       urls.map((url, i) => ({
-        url: new URL(urls[i]),
+        url: new URL(url),
         originalName: `img-${i + 1}`,
         originalExtension: 'jpg',
         directory: process.cwd(),
@@ -238,7 +237,7 @@ describe('`imgdl`', () => {
         const name = `${imageOptions.name}${i === 0 ? '' : ` (${i})`}`;
 
         return {
-          url: new URL(urls[i]),
+          url: new URL(url),
           originalName: `img-${i + 1}`,
           originalExtension: 'jpg',
           directory: path.resolve(imageOptions.directory),
@@ -257,7 +256,7 @@ describe('`imgdl`', () => {
   it('should abort download if signal is aborted', async ({
     onTestFinished,
   }) => {
-    const dir = directory + '/abort-test';
+    const dir = `${directory}/abort-test`;
 
     onTestFinished(async () => {
       await fs.rm(dir, { recursive: true, force: true });
@@ -269,10 +268,10 @@ describe('`imgdl`', () => {
       (_, i) => `${BASE_URL}/img-${i}.jpg`,
     );
 
-    let countSuccess = 0,
-      countError = 0;
-    const onSuccess = vi.fn().mockImplementation(() => (countSuccess += 1));
-    const onError = vi.fn().mockImplementation(() => (countError += 1));
+    let countSuccess = 0;
+    let countError = 0;
+    const onSuccess = vi.fn().mockImplementation(() => ++countSuccess);
+    const onError = vi.fn().mockImplementation(() => ++countError);
 
     const controller = new AbortController();
     setTimeout(() => controller.abort(), 300); // Abort after 300ms
