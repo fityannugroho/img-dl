@@ -27,7 +27,7 @@ importers:
         specifier: ^1.6.3
         version: 1.6.3
       sharp:
-        specifier: ^0.33.4
+        specifier: ^0.33.5
         version: 0.33.5
     devDependencies:
       '@eslint/js':
