@@ -1,6 +1,6 @@
 import fs from 'fs';
-import { http, HttpResponse } from 'msw';
 import path from 'path';
+import { http, HttpResponse } from 'msw';
 
 const DEFAULT_IMAGE_NAME = 'image';
 const DEFAULT_IMAGE_EXTENSION = 'jpg';

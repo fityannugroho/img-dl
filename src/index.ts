@@ -1,5 +1,6 @@
-import PQueue from 'p-queue';
 import { setMaxListeners } from 'node:events';
+import path from 'node:path';
+import PQueue from 'p-queue';
 import { DEFAULT_INTERVAL, DEFAULT_STEP } from './constanta.js';
 import {
   DownloadOptions,
@@ -7,7 +8,6 @@ import {
   download,
   parseImageParams,
 } from './downloader.js';
-import path from 'node:path';
 
 export type Image = {
   /**

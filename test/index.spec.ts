@@ -1,5 +1,5 @@
-/* eslint-disable @typescript-eslint/no-non-null-assertion */
 import fs from 'node:fs/promises';
+import path from 'node:path';
 import {
   afterAll,
   afterEach,
@@ -9,14 +9,13 @@ import {
   it,
   vi,
 } from 'vitest';
-import imgdl, { Image } from '~/index.js';
-import { server } from './fixtures/mocks/node.js';
-import { BASE_URL } from './fixtures/mocks/handlers.js';
-import * as downloader from '~/downloader.js';
-import path from 'node:path';
-import DirectoryError from '~/errors/DirectoryError.js';
-import ArgumentError from '~/errors/ArgumentError.js';
 import { DEFAULT_EXTENSION, DEFAULT_NAME } from '~/constanta.js';
+import * as downloader from '~/downloader.js';
+import ArgumentError from '~/errors/ArgumentError.js';
+import DirectoryError from '~/errors/DirectoryError.js';
+import imgdl, { Image } from '~/index.js';
+import { BASE_URL } from './fixtures/mocks/handlers.js';
+import { server } from './fixtures/mocks/node.js';
 
 describe('`imgdl`', () => {
   /**

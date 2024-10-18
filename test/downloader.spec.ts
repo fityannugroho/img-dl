@@ -1,7 +1,7 @@
-import { fileTypeFromFile } from 'file-type';
-import { RequestError } from 'got';
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileTypeFromFile } from 'file-type';
+import { RequestError } from 'got';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { DEFAULT_EXTENSION, DEFAULT_NAME } from '~/constanta.js';
 import { download, parseImageParams } from '~/downloader.js';

@@ -1,7 +1,7 @@
-import got, { PlainResponse } from 'got';
 import fs from 'node:fs';
 import path from 'node:path';
 import { pipeline } from 'node:stream/promises';
+import got, { PlainResponse } from 'got';
 import sanitize from 'sanitize-filename';
 import sharp, { FormatEnum } from 'sharp';
 import {

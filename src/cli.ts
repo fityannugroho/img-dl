@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 
-import cliProgress from 'cli-progress';
-import meow from 'meow';
 import fs from 'node:fs';
 import path from 'node:path';
 import chalk from 'chalk';
+import cliProgress from 'cli-progress';
+import meow from 'meow';
 import ArgumentError from './errors/ArgumentError.js';
 import DirectoryError from './errors/DirectoryError.js';
 import imgdl, { Options } from './index.js';
@@ -124,7 +124,6 @@ async function bootstrap() {
 
   const separator = dimLog('|');
   const bar = new cliProgress.SingleBar({
-    // eslint-disable-next-line max-len
     format: `{percentage}% [{bar}] {value}/{total} ${separator} ${successLog('✅ {success}')} ${separator} ${errorLog('❌ {errorCount}')} ${separator} ETA: {eta_formatted} ${dimLog('/ {duration_formatted}')}`,
     hideCursor: null,
     barsize: 24,
