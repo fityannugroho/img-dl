@@ -159,7 +159,7 @@ describe('`imgdl`', () => {
     images.sort((a, b) => a.name.localeCompare(b.name));
     expect(images).toStrictEqual(
       urls.map((url, i) => ({
-        url: new URL(urls[i]),
+        url: new URL(url),
         originalName: `img-${i + 1}`,
         originalExtension: 'jpg',
         directory: process.cwd(),
@@ -237,7 +237,7 @@ describe('`imgdl`', () => {
         const name = `${imageOptions.name}${i === 0 ? '' : ` (${i})`}`;
 
         return {
-          url: new URL(urls[i]),
+          url: new URL(url),
           originalName: `img-${i + 1}`,
           originalExtension: 'jpg',
           directory: path.resolve(imageOptions.directory),

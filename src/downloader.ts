@@ -80,7 +80,7 @@ export function parseImageParams(url: string, options?: ImageOptions) {
 
   try {
     validUrl = new URL(url);
-  } catch (error) {
+  } catch {
     throw new ArgumentError('Invalid URL');
   }
 
@@ -167,7 +167,7 @@ export async function download(img: Image, options: DownloadOptions = {}) {
   // Check if the directory exists and create it if it doesn't
   try {
     await fs.promises.access(img.directory);
-  } catch (error) {
+  } catch {
     try {
       await fs.promises.mkdir(img.directory, { recursive: true });
     } catch (error) {
