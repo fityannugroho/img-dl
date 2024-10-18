@@ -8,12 +8,10 @@
   "bin": {
     "imgdl": "dist/cli.js"
   },
-  "files": [
-    "dist"
-  ],
+  "files": ["dist"],
   "scripts": {
-    "lint": "eslint . && prettier --check .",
-    "lint:fix": "eslint . --fix && prettier --write .",
+    "lint": "biome check .",
+    "lint:fix": "biome check --write .",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:cov": "vitest run --coverage",
@@ -23,11 +21,7 @@
     "type": "git",
     "url": "git+https://github.com/fityannugroho/img-dl.git"
   },
-  "keywords": [
-    "image-downloader",
-    "nodejs",
-    "cli"
-  ],
+  "keywords": ["image-downloader", "nodejs", "cli"],
   "author": "Fityan <fityannugroho@gmail.com> (https://github.com/fityannugroho)",
   "license": "MIT",
   "bugs": {
