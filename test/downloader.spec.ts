@@ -211,7 +211,7 @@ describe('parseImageParams', () => {
       fs.mkdirSync(options.directory, { recursive: true });
 
       onTestFinished(() => {
-        fs.rmSync(options.directory, { recursive: true, force: true });
+        fs.rmSync('images', { recursive: true, force: true });
       });
 
       fs.writeFileSync(path.resolve(options.directory, 'image.jpg'), '');

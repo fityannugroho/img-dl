@@ -27,7 +27,12 @@ describe('`imgdl`', () => {
 
   afterEach(() => server.resetHandlers());
 
-  afterAll(() => server.close());
+  afterAll(async () => {
+    server.close();
+
+    // Remove the `tmp` directory
+    await fs.rm(directory, { force: true, recursive: true });
+  });
 
   it('should download an image if single URL is provided', async ({
     onTestFinished,
@@ -73,7 +78,7 @@ describe('`imgdl`', () => {
     const parseImageParamsSpy = vi.spyOn(downloader, 'parseImageParams');
     const url = `${BASE_URL}/image.jpg`;
     const imageOptions = {
-      directory: 'test/tmp/images',
+      directory: `${directory}/images`,
       extension: 'png',
       name: 'myimage',
     };
@@ -304,8 +309,8 @@ describe('`imgdl`', () => {
     const sources = [
       { url, name: 'myimage' },
       { url, extension: 'png' },
-      { url, directory: 'images' },
-      { url, name: 'myimage', extension: 'png', directory: 'images' },
+      { url, directory: directory },
+      { url, name: 'myimage', extension: 'png', directory: directory },
     ];
     const defaultExpected = {
       url: new URL('https://example.com/image.jpg'),
@@ -335,20 +340,20 @@ describe('`imgdl`', () => {
       },
       {
         ...defaultExpected,
-        directory: path.resolve('images'),
-        path: path.resolve('images', 'image.jpg'),
+        name: 'myimage',
+        path: path.resolve('myimage.jpg'),
+      },
+      {
+        ...defaultExpected,
+        directory: path.resolve(directory),
+        path: path.resolve(directory, 'image.jpg'),
       },
       {
         ...defaultExpected,
         name: 'myimage',
         extension: 'png',
-        directory: path.resolve('images'),
-        path: path.resolve('images', 'myimage.png'),
-      },
-      {
-        ...defaultExpected,
-        name: 'myimage',
-        path: path.resolve('myimage.jpg'),
+        directory: path.resolve(directory),
+        path: path.resolve(directory, 'myimage.png'),
       },
     ]);
 
@@ -373,7 +378,7 @@ describe('`imgdl`', () => {
     const sources = [
       { url, name: 'myavatar' }, // Will be saved as `myavatar.png`
       { url, extension: 'webp' }, // Will be saved as `avatar.webp`
-      { url, directory: 'avatars' }, // Will be saved as `avatar.png` in `avatars` directory
+      { url, directory: directory }, // Will be saved as `avatar.png` in the target directory
     ];
     const defaultExpected = {
       url: new URL('https://example.com/image.jpg'),
@@ -403,14 +408,14 @@ describe('`imgdl`', () => {
       },
       {
         ...defaultExpected,
-        directory: path.resolve('avatars'),
-        path: path.resolve('avatars', 'avatar.png'),
-      },
-      {
-        ...defaultExpected,
         name: 'myavatar',
         extension: 'png',
         path: path.resolve('myavatar.png'),
+      },
+      {
+        ...defaultExpected,
+        directory: path.resolve(directory),
+        path: path.resolve(directory, 'avatar.png'),
       },
     ]);
 
@@ -430,7 +435,7 @@ describe('`imgdl`', () => {
       { url: `${BASE_URL}/img-1.jpg` },
       { url: `${BASE_URL}/image.jpg`, name: 'myimage' },
       { url: `${BASE_URL}/img-2.jpg`, extension: 'png' },
-      { url: `${BASE_URL}/img-3.jpg`, directory: 'images' },
+      { url: `${BASE_URL}/img-3.jpg`, directory: directory },
     ];
 
     onTestFinished(async () => {

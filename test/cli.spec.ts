@@ -2,7 +2,7 @@ import fs from 'node:fs/promises';
 import chalk from 'chalk';
 import { $ } from 'execa';
 import got from 'got';
-import { beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import ArgumentError from '~/errors/ArgumentError.js';
 import { generateDownloadUrls } from '~/utils.js';
 
@@ -93,6 +93,10 @@ describe('cli', async () => {
 
   beforeAll(async () => {
     await $`tsup src/cli.ts --format esm -d ${dist} --clean`;
+  });
+
+  afterAll(async () => {
+    await fs.rm(dist, { recursive: true });
   });
 
   it('should show the version', async () => {
