@@ -76,7 +76,7 @@ PARAMETERS
 
 OPTIONS
   -d, --dir=<path>          The output directory. Default: current working directory
-      --end=<number>        The end index. Required in increment mode
+      --end=<number>        The end index for increment mode. Default: 0
   -e, --ext=<ext>           The file extension. Default: original extension or jpg
   -h, --help                Show this help message
   -H, --header=<header>     The header to send with the request. Can be used multiple times
@@ -244,7 +244,10 @@ The output directory.
 Type: `string`<br>
 Default: `'jpg'`
 
-The file extension. If not specified, the original extension will be used. If the original extension is not available, 'jpg' will be used.
+The image extension. The extension must be any of [`sharp` supported formats](https://sharp.pixelplumbing.com/#formats).
+If not specified, the original extension will be used.
+
+If the original extension is not available, 'jpg' will be used.
 
 ##### `headers`
 

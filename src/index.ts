@@ -1,5 +1,6 @@
-import PQueue from 'p-queue';
 import { setMaxListeners } from 'node:events';
+import path from 'node:path';
+import PQueue from 'p-queue';
 import { DEFAULT_INTERVAL, DEFAULT_STEP } from './constanta.js';
 import {
   DownloadOptions,
@@ -7,7 +8,6 @@ import {
   download,
   parseImageParams,
 } from './downloader.js';
-import path from 'node:path';
 
 export type Image = {
   /**
@@ -23,7 +23,7 @@ export type Image = {
    */
   extension: string;
   /**
-   * The directory to save the image to. Can be relative or absolute.
+   * The path of the directory where the image is saved.
    */
   directory: string;
   /**
@@ -96,33 +96,34 @@ async function imgdl(
 
   // Set max listeners to infinity to prevent memory leak warning
   if (downloadOptions?.signal) {
-    setMaxListeners(Infinity, downloadOptions.signal);
+    setMaxListeners(Number.POSITIVE_INFINITY, downloadOptions.signal);
   }
 
   const countNames = new Map<string, number>();
 
-  urls.forEach(async (_url) => {
+  for (const _url of urls) {
     // Get image URL and options
     const { url: imgUrl, ...imgOptions } =
       typeof _url === 'string' ? { url: _url } : _url;
 
-    const img = parseImageParams(imgUrl, {
-      directory: imgOptions.directory || directory,
-      name: imgOptions.name || name,
-      extension: imgOptions.extension || extension,
-    });
-
-    // Make sure the name is unique in the destination directory
-    const nameKey = `${img.directory}/${img.name}.${img.extension}`;
-    const count = countNames.get(nameKey);
-    if (count) {
-      img.name = `${img.name} (${count})`;
-      img.path = path.resolve(img.directory, `${img.name}.${img.extension}`);
-    }
-    countNames.set(nameKey, (count || 0) + 1);
-
-    // Add the download task to queue
     try {
+      // Validate and parse the image parameters
+      const img = parseImageParams(imgUrl, {
+        directory: imgOptions.directory || directory,
+        name: imgOptions.name || name,
+        extension: imgOptions.extension || extension,
+      });
+
+      // Make sure the name is unique in the destination directory
+      const nameKey = `${img.directory}/${img.name}.${img.extension}`;
+      const count = countNames.get(nameKey);
+      if (count) {
+        img.name = `${img.name} (${count})`;
+        img.path = path.resolve(img.directory, `${img.name}.${img.extension}`);
+      }
+      countNames.set(nameKey, (count || 0) + 1);
+
+      // Add the download task to queue
       const image = await queue.add(
         ({ signal }) => download(img, { ...downloadOptions, signal }),
         { signal: downloadOptions?.signal },
@@ -132,14 +133,9 @@ async function imgdl(
         onSuccess?.(image);
       }
     } catch (error) {
-      onError?.(
-        error instanceof Error
-          ? error
-          : new Error('Unknown error', { cause: error }),
-        imgUrl,
-      );
+      onError?.(error as Error, imgUrl);
     }
-  });
+  }
 
   await queue.onIdle();
 }

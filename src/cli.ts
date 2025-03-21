@@ -1,13 +1,14 @@
 #!/usr/bin/env node
 
-import cliProgress from 'cli-progress';
-import meow from 'meow';
 import fs from 'node:fs';
 import path from 'node:path';
 import chalk from 'chalk';
+import cliProgress from 'cli-progress';
+import meow from 'meow';
 import ArgumentError from './errors/ArgumentError.js';
 import DirectoryError from './errors/DirectoryError.js';
-import imgdl, { Options } from './index.js';
+import imgdl, { type Options } from './index.js';
+import { generateDownloadUrls } from './utils.js';
 
 const cli = meow(
   `
@@ -21,7 +22,7 @@ const cli = meow(
 
   OPTIONS
     -d, --dir=<path>          The output directory. Default: current working directory
-        --end=<number>        The end index. Required in increment mode
+        --end=<number>        The end index for increment mode. Default: 0
     -e, --ext=<ext>           The file extension. Default: original extension or jpg
     -h, --help                Show this help message
     -H, --header=<header>     The header to send with the request. Can be used multiple times
@@ -104,8 +105,8 @@ const warningLog = chalk.yellow;
 const dimLog = chalk.dim;
 
 async function bootstrap() {
-  let urls = cli.input;
   const { flags } = cli;
+  const urls = generateDownloadUrls(cli.input, flags);
 
   if (flags.version) {
     cli.showVersion();
@@ -113,37 +114,6 @@ async function bootstrap() {
 
   if (!urls.length) {
     cli.showHelp(0);
-  }
-
-  if (flags.increment) {
-    if (urls.length > 1) {
-      throw new ArgumentError('Only one URL is allowed in increment mode');
-    }
-
-    const templateUrl = urls[0];
-
-    if (!templateUrl.includes('{i}')) {
-      throw new ArgumentError(
-        'The URL must contain {i} placeholder for the index',
-      );
-    }
-
-    if (!flags.end) {
-      throw new ArgumentError('The end index is required in increment mode');
-    }
-
-    if (flags.start && flags.start > flags.end) {
-      throw new ArgumentError(
-        'The start index cannot be greater than the end index',
-      );
-    }
-
-    const { start = 0, end } = flags;
-    urls = [];
-
-    for (let i = start; i <= end; i += 1) {
-      urls.push(templateUrl.replace('{i}', i.toString()));
-    }
   }
 
   if (!flags.silent) {
@@ -154,7 +124,6 @@ async function bootstrap() {
 
   const separator = dimLog('|');
   const bar = new cliProgress.SingleBar({
-    // eslint-disable-next-line max-len
     format: `{percentage}% [{bar}] {value}/{total} ${separator} ${successLog('✅ {success}')} ${separator} ${errorLog('❌ {errorCount}')} ${separator} ETA: {eta_formatted} ${dimLog('/ {duration_formatted}')}`,
     hideCursor: null,
     barsize: 24,
@@ -169,15 +138,15 @@ async function bootstrap() {
   // Validate and convert headers
   const headers: Options['headers'] = {};
   if (flags.header) {
-    flags.header.forEach((header) => {
-      const [name, value] = header.split(':');
+    for (const header of flags.header) {
+      const [name, value] = header.split(':').map((part) => part.trim());
 
       if (!name || !value) {
         throw new ArgumentError('Invalid header format');
       }
 
-      headers[name.trim()] = value.trim();
-    });
+      headers[name] = value;
+    }
   }
 
   const abortController = new AbortController();
@@ -188,52 +157,59 @@ async function bootstrap() {
     abortController.abort();
   });
 
-  await imgdl(urls.length === 1 ? urls[0] : urls, {
-    directory: flags.dir,
-    name: flags.name,
-    extension: flags.ext,
-    headers,
-    interval: flags.interval,
-    onSuccess: () => {
-      if (!flags.silent) {
-        success += 1;
-        bar.increment({ success });
-      }
-    },
-    onError: (error, url) => {
-      errorCount += 1;
-      if (!flags.silent) {
-        bar.increment({ errorCount });
-      }
-      if (error instanceof ArgumentError || error instanceof DirectoryError) {
-        throw error;
-      }
-      fs.appendFileSync(
-        path.resolve(flags.dir || process.cwd(), 'error.log'),
-        `${new Date().toISOString()} failed download from ${url}, ${error.name}: ${error.message}\n`,
-      );
-    },
-    maxRetry: flags.maxRetry,
-    step: flags.step,
-    timeout: flags.timeout,
-    signal: abortController.signal,
-  });
+  try {
+    await new Promise<void>((resolve, rejects) => {
+      imgdl(urls, {
+        directory: flags.dir,
+        name: flags.name,
+        extension: flags.ext,
+        headers,
+        interval: flags.interval,
+        onSuccess: () => {
+          success += 1;
+          if (!flags.silent) {
+            bar.increment({ success });
+          }
+        },
+        onError: (error, url) => {
+          if (
+            error instanceof ArgumentError ||
+            error instanceof DirectoryError
+          ) {
+            return rejects(error);
+          }
 
-  if (!flags.silent) {
-    bar.stop();
-    console.log(dimLog('Done!'));
+          errorCount += 1;
+          if (!flags.silent) {
+            bar.increment({ errorCount });
+          }
+          fs.appendFileSync(
+            path.resolve(flags.dir || process.cwd(), 'error.log'),
+            `${new Date().toISOString()} failed download from ${url}, ${error.name}: ${error.message}\n`,
+          );
+        },
+        maxRetry: flags.maxRetry,
+        step: flags.step,
+        timeout: flags.timeout,
+        signal: abortController.signal,
+      }).then(resolve, rejects);
+    });
+  } finally {
+    if (!flags.silent) {
+      bar.stop();
+      console.log(dimLog('Done!'));
 
-    if (errorCount) {
-      console.log(
-        errorLog(
-          `${errorCount} image${errorCount > 1 ? 's' : ''} failed to download. See ./error.log for details.`,
-        ),
-      );
+      if (errorCount) {
+        console.log(
+          errorLog(
+            `${errorCount} image${errorCount > 1 ? 's' : ''} failed to download. See error.log for details.`,
+          ),
+        );
+      }
     }
   }
 }
 
 bootstrap().catch((error: Error) => {
   console.error(errorLog(`\n${error.name}: ${error.message}`));
-  process.exit(1);
 });

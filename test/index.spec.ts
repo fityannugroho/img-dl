@@ -1,5 +1,5 @@
-/* eslint-disable @typescript-eslint/no-non-null-assertion */
 import fs from 'node:fs/promises';
+import path from 'node:path';
 import {
   afterAll,
   afterEach,
@@ -9,12 +9,13 @@ import {
   it,
   vi,
 } from 'vitest';
-import imgdl, { Image } from '~/index.js';
-import { server } from './fixtures/mocks/node.js';
-import { BASE_URL } from './fixtures/mocks/handlers.js';
+import { DEFAULT_EXTENSION, DEFAULT_NAME } from '~/constanta.js';
 import * as downloader from '~/downloader.js';
-import path from 'node:path';
+import ArgumentError from '~/errors/ArgumentError.js';
 import DirectoryError from '~/errors/DirectoryError.js';
+import imgdl, { type Image } from '~/index.js';
+import { BASE_URL } from './fixtures/mocks/handlers.js';
+import { server } from './fixtures/mocks/node.js';
 
 describe('`imgdl`', () => {
   /**
@@ -26,33 +27,49 @@ describe('`imgdl`', () => {
 
   afterEach(() => server.resetHandlers());
 
-  afterAll(() => server.close());
+  afterAll(async () => {
+    server.close();
+
+    // Remove the `tmp` directory
+    await fs.rm(directory, { force: true, recursive: true });
+  });
 
   it('should download an image if single URL is provided', async ({
     onTestFinished,
   }) => {
-    const url = `${BASE_URL}/image.jpg`;
-    let image: Image | undefined;
-    const onSuccess = vi.fn().mockImplementation((img) => {
-      image = img;
+    const url = `${BASE_URL}/image`;
+    const expectedPath = path.resolve(`${DEFAULT_NAME}.${DEFAULT_EXTENSION}`);
+
+    onTestFinished(async () => {
+      await fs.rm(expectedPath, { force: true });
+    });
+
+    await expect(imgdl(url)).resolves.toBeUndefined();
+    await expect(fs.access(expectedPath)).resolves.toBeUndefined();
+  });
+
+  it('use default value of image options if not provided', async ({
+    onTestFinished,
+  }) => {
+    const url = `${BASE_URL}/image`;
+    const image = await new Promise<Image>((resolve, rejects) => {
+      imgdl(url, { onSuccess: resolve, onError: rejects });
     });
 
     onTestFinished(async () => {
-      await fs.rm(image!.path, { force: true });
+      await fs.rm(image.path, { force: true });
     });
 
-    await expect(imgdl(url, { onSuccess })).resolves.toBeUndefined();
-    expect(onSuccess).toHaveBeenCalledTimes(1);
     expect(image).toStrictEqual({
       url: new URL(url),
-      name: 'image',
-      extension: 'jpg',
+      originalName: undefined,
+      originalExtension: undefined,
       directory: process.cwd(),
-      originalName: 'image',
-      originalExtension: 'jpg',
-      path: path.resolve('image.jpg'),
+      name: DEFAULT_NAME,
+      extension: DEFAULT_EXTENSION,
+      path: path.join(image.directory, `${image.name}.${image.extension}`),
     });
-    await expect(fs.access(image!.path)).resolves.toBeUndefined();
+    await expect(fs.access(image.path)).resolves.toBeUndefined();
   });
 
   it('should download an image with specific image options', async ({
@@ -61,7 +78,7 @@ describe('`imgdl`', () => {
     const parseImageParamsSpy = vi.spyOn(downloader, 'parseImageParams');
     const url = `${BASE_URL}/image.jpg`;
     const imageOptions = {
-      directory: 'test/tmp/images',
+      directory: `${directory}/images`,
       extension: 'png',
       name: 'myimage',
     };
@@ -81,8 +98,9 @@ describe('`imgdl`', () => {
       url: new URL(url),
       originalName: 'image',
       originalExtension: 'jpg',
-      path: path.resolve(
-        imageOptions.directory,
+      directory: path.resolve(imageOptions.directory),
+      path: path.join(
+        image.directory,
         `${imageOptions.name}.${imageOptions.extension}`,
       ),
     });
@@ -103,14 +121,23 @@ describe('`imgdl`', () => {
     expect(error).toBeInstanceOf(DirectoryError);
   });
 
-  it('should not throw any error if URL is invalid', async () => {
-    const url = `${BASE_URL}/unknown`;
+  it.each([
+    'not-url',
+    'some/path',
+    'example.com/image.jpg',
+    'ftp://example.com',
+    'ws://example.com',
+  ])('should not throw any error if URL is invalid', async (url) => {
+    let error: Error | undefined;
     const onSuccess = vi.fn();
-    const onError = vi.fn();
+    const onError = vi.fn().mockImplementation((err) => {
+      error = err;
+    });
 
     await expect(imgdl(url, { onSuccess, onError })).resolves.toBeUndefined();
     expect(onSuccess).toHaveBeenCalledTimes(0);
     expect(onError).toHaveBeenCalledTimes(1);
+    expect(error).toBeInstanceOf(ArgumentError);
   });
 
   it('should download multiple images if array of URLs is provided', async ({
@@ -137,7 +164,7 @@ describe('`imgdl`', () => {
     images.sort((a, b) => a.name.localeCompare(b.name));
     expect(images).toStrictEqual(
       urls.map((url, i) => ({
-        url: new URL(urls[i]),
+        url: new URL(url),
         originalName: `img-${i + 1}`,
         originalExtension: 'jpg',
         directory: process.cwd(),
@@ -215,13 +242,13 @@ describe('`imgdl`', () => {
         const name = `${imageOptions.name}${i === 0 ? '' : ` (${i})`}`;
 
         return {
-          url: new URL(urls[i]),
+          url: new URL(url),
           originalName: `img-${i + 1}`,
           originalExtension: 'jpg',
-          directory,
+          directory: path.resolve(imageOptions.directory),
           name,
           extension: imageOptions.extension,
-          path: path.resolve(directory, `${name}.png`),
+          path: path.resolve(imageOptions.directory, `${name}.png`),
         };
       }),
     );
@@ -234,7 +261,7 @@ describe('`imgdl`', () => {
   it('should abort download if signal is aborted', async ({
     onTestFinished,
   }) => {
-    const dir = directory + '/abort-test';
+    const dir = `${directory}/abort-test`;
 
     onTestFinished(async () => {
       await fs.rm(dir, { recursive: true, force: true });
@@ -246,10 +273,10 @@ describe('`imgdl`', () => {
       (_, i) => `${BASE_URL}/img-${i}.jpg`,
     );
 
-    let countSuccess = 0,
-      countError = 0;
-    const onSuccess = vi.fn().mockImplementation(() => (countSuccess += 1));
-    const onError = vi.fn().mockImplementation(() => (countError += 1));
+    let countSuccess = 0;
+    let countError = 0;
+    const onSuccess = vi.fn().mockImplementation(() => ++countSuccess);
+    const onError = vi.fn().mockImplementation(() => ++countError);
 
     const controller = new AbortController();
     setTimeout(() => controller.abort(), 300); // Abort after 300ms
@@ -282,8 +309,8 @@ describe('`imgdl`', () => {
     const sources = [
       { url, name: 'myimage' },
       { url, extension: 'png' },
-      { url, directory: 'images' },
-      { url, name: 'myimage', extension: 'png', directory: 'images' },
+      { url, directory: directory },
+      { url, name: 'myimage', extension: 'png', directory: directory },
     ];
     const defaultExpected = {
       url: new URL('https://example.com/image.jpg'),
@@ -313,20 +340,20 @@ describe('`imgdl`', () => {
       },
       {
         ...defaultExpected,
-        directory: 'images',
-        path: path.resolve('images', 'image.jpg'),
+        name: 'myimage',
+        path: path.resolve('myimage.jpg'),
+      },
+      {
+        ...defaultExpected,
+        directory: path.resolve(directory),
+        path: path.resolve(directory, 'image.jpg'),
       },
       {
         ...defaultExpected,
         name: 'myimage',
         extension: 'png',
-        directory: 'images',
-        path: path.resolve('images', 'myimage.png'),
-      },
-      {
-        ...defaultExpected,
-        name: 'myimage',
-        path: path.resolve('myimage.jpg'),
+        directory: path.resolve(directory),
+        path: path.resolve(directory, 'myimage.png'),
       },
     ]);
 
@@ -351,7 +378,7 @@ describe('`imgdl`', () => {
     const sources = [
       { url, name: 'myavatar' }, // Will be saved as `myavatar.png`
       { url, extension: 'webp' }, // Will be saved as `avatar.webp`
-      { url, directory: 'avatars' }, // Will be saved as `avatar.png` in `avatars` directory
+      { url, directory: directory }, // Will be saved as `avatar.png` in the target directory
     ];
     const defaultExpected = {
       url: new URL('https://example.com/image.jpg'),
@@ -381,14 +408,14 @@ describe('`imgdl`', () => {
       },
       {
         ...defaultExpected,
-        directory: 'avatars',
-        path: path.resolve('avatars', 'avatar.png'),
-      },
-      {
-        ...defaultExpected,
         name: 'myavatar',
         extension: 'png',
         path: path.resolve('myavatar.png'),
+      },
+      {
+        ...defaultExpected,
+        directory: path.resolve(directory),
+        path: path.resolve(directory, 'avatar.png'),
       },
     ]);
 
@@ -408,7 +435,7 @@ describe('`imgdl`', () => {
       { url: `${BASE_URL}/img-1.jpg` },
       { url: `${BASE_URL}/image.jpg`, name: 'myimage' },
       { url: `${BASE_URL}/img-2.jpg`, extension: 'png' },
-      { url: `${BASE_URL}/img-3.jpg`, directory: 'images' },
+      { url: `${BASE_URL}/img-3.jpg`, directory: directory },
     ];
 
     onTestFinished(async () => {

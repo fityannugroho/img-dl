@@ -1,8 +1,9 @@
-import got, { PlainResponse } from 'got';
 import fs from 'node:fs';
 import path from 'node:path';
 import { pipeline } from 'node:stream/promises';
+import got, { type PlainResponse } from 'got';
 import sanitize from 'sanitize-filename';
+import sharp, { type FormatEnum } from 'sharp';
 import {
   DEFAULT_EXTENSION,
   DEFAULT_NAME,
@@ -10,7 +11,7 @@ import {
 } from './constanta.js';
 import ArgumentError from './errors/ArgumentError.js';
 import DirectoryError from './errors/DirectoryError.js';
-import { Image } from './index.js';
+import type { Image } from './index.js';
 
 export type ImageOptions = {
   /**
@@ -61,6 +62,11 @@ export type DownloadOptions = {
 };
 
 /**
+ * Supported image extensions by `sharp`.
+ */
+const sharpExtensions = new Set([...Object.keys(sharp.format), 'jpg']);
+
+/**
  * Parses and validates the image parameters.
  *
  * If image options are not provided, the default values will be used.
@@ -74,7 +80,7 @@ export function parseImageParams(url: string, options?: ImageOptions) {
 
   try {
     validUrl = new URL(url);
-  } catch (error) {
+  } catch {
     throw new ArgumentError('Invalid URL');
   }
 
@@ -82,15 +88,21 @@ export function parseImageParams(url: string, options?: ImageOptions) {
     throw new ArgumentError('URL protocol must be http or https');
   }
 
-  const lowerImgExts = [...imageExtensions].map((ext) => ext.toLowerCase());
-  const originalExt = path.extname(url).replace('.', '');
+  const originalExt = path
+    .extname(validUrl.pathname)
+    .replace('.', '')
+    .toLowerCase();
+
+  // Ensure the original extension is supported
+  if (originalExt.length && !imageExtensions.has(originalExt)) {
+    throw new ArgumentError('The URL is not a valid image URL');
+  }
+
   const img: Image = {
     url: validUrl,
     name: '',
     extension: '',
-    directory: options?.directory
-      ? path.normalize(options.directory)
-      : process.cwd(),
+    directory: path.resolve(options?.directory || '.'),
     originalName:
       originalExt === ''
         ? undefined
@@ -98,12 +110,6 @@ export function parseImageParams(url: string, options?: ImageOptions) {
     originalExtension: originalExt === '' ? undefined : originalExt,
     path: '',
   };
-
-  // Validate the directory path syntax and ensure it is a directory without a filename.
-  const { base, name: nameFromPath } = path.parse(img.directory);
-  if (base !== nameFromPath) {
-    throw new ArgumentError('`directory` cannot contain filename');
-  }
 
   // Set name
   if (options?.name) {
@@ -114,43 +120,37 @@ export function parseImageParams(url: string, options?: ImageOptions) {
     throw new ArgumentError('Invalid `name` value');
   }
 
-  const extInName = img.name.toLowerCase().split('.').pop();
-  if (extInName && lowerImgExts.includes(extInName)) {
-    throw new ArgumentError('`name` cannot contain image extension');
-  }
-
   if (img.name.trim() === '') {
-    img.name = img.originalName ?? DEFAULT_NAME;
+    img.name = img.originalName || DEFAULT_NAME;
   }
 
   // Set extension
   if (options?.extension) {
-    if (
-      !lowerImgExts.includes(options.extension.toLowerCase()) ||
-      options.extension.includes('.')
-    ) {
-      throw new ArgumentError('Invalid `extension` value');
+    options.extension = options.extension.toLowerCase();
+
+    // Ensure the extension is supported by sharp
+    if (!sharpExtensions.has(options.extension)) {
+      throw new ArgumentError('Unsupported image extension');
     }
+
     img.extension = options.extension;
   }
 
   if (img.extension === '') {
-    img.extension = lowerImgExts.includes(originalExt.toLowerCase())
-      ? originalExt
-      : DEFAULT_EXTENSION;
+    img.extension = img.originalExtension || DEFAULT_EXTENSION;
   }
 
   // Make sure the path is unique, if not, add a number to the end of the name.
   while (
-    fs.existsSync(path.resolve(img.directory, `${img.name}.${img.extension}`))
+    fs.existsSync(path.join(img.directory, `${img.name}.${img.extension}`))
   ) {
     const match = img.name.match(/ \((\d+)\)$/);
-    const num = match ? parseInt(match[1], 10) + 1 : 1;
-    img.name = img.name.replace(/ \(\d+\)$/, '') + ` (${num})`;
+    const num = match ? Number.parseInt(match[1], 10) + 1 : 1;
+    img.name = `${img.name.replace(/ \(\d+\)$/, '')} (${num})`;
   }
 
   // Set path
-  img.path = path.resolve(img.directory, `${img.name}.${img.extension}`);
+  img.path = path.join(img.directory, `${img.name}.${img.extension}`);
 
   return img;
 }
@@ -164,37 +164,46 @@ export function parseImageParams(url: string, options?: ImageOptions) {
  * @throws {Error} If there are any other errors.
  */
 export async function download(img: Image, options: DownloadOptions = {}) {
-  // Create the directory if it doesn't exist.
-  if (!fs.existsSync(img.directory)) {
+  // Check if the directory exists and create it if it doesn't
+  try {
+    await fs.promises.access(img.directory);
+  } catch {
     try {
-      fs.mkdirSync(img.directory, { recursive: true });
+      await fs.promises.mkdir(img.directory, { recursive: true });
     } catch (error) {
-      throw new DirectoryError(
-        (error as Error)?.message ?? `Failed to create '${img.directory}'`,
-      );
+      throw new DirectoryError((error as Error).message);
     }
   }
 
-  return await new Promise<Image>((resolve, reject) => {
-    const fetchStream = got.stream(img.url, {
-      timeout: {
-        request: options.timeout,
-      },
-      retry: {
-        limit: options.maxRetry,
-      },
-      headers: options.headers,
-      signal: options.signal,
-    });
+  // Check if the directory is unrestricted
+  try {
+    await fs.promises.access(
+      img.directory,
+      fs.constants.R_OK | fs.constants.W_OK,
+    );
+  } catch (error) {
+    throw new DirectoryError((error as Error).message);
+  }
 
-    const onError = (error: unknown) => {
+  const fetchStream = got.stream(img.url, {
+    timeout: { request: options.timeout },
+    retry: { limit: options.maxRetry },
+    headers: options.headers,
+    signal: options.signal,
+  });
+
+  const writeStream = fs.createWriteStream(img.path);
+
+  return await new Promise<Image>((resolve, reject) => {
+    const onError = async (error: unknown) => {
+      // Clean up partially downloaded files if an error occurs
+      await fs.promises.rm(img.path, { force: true });
       reject(error);
     };
 
     fetchStream.on('response', (res: PlainResponse) => {
       // Ensure the response is an image
-      const contentType = res.headers['content-type'];
-      if (!contentType || !contentType.startsWith('image/')) {
+      if (!res.headers['content-type']?.startsWith('image/')) {
         fetchStream.destroy(new Error('The response is not an image.'));
         return;
       }
@@ -202,9 +211,21 @@ export async function download(img: Image, options: DownloadOptions = {}) {
       // Prevent `onError` being called twice.
       fetchStream.off('error', onError);
 
-      pipeline(fetchStream, fs.createWriteStream(img.path))
-        .then(() => resolve(img)) // Return the image data.
-        .catch(onError);
+      let pipePromise: Promise<void>;
+
+      // Transform the image if the extension is specified by the user
+      if (img.extension !== img.originalExtension) {
+        const transformStream = sharp()
+          .toFormat(img.extension.replace('jpg', 'jpeg') as keyof FormatEnum)
+          .withMetadata();
+
+        pipePromise = pipeline(fetchStream, transformStream, writeStream);
+      } else {
+        pipePromise = pipeline(fetchStream, writeStream);
+      }
+
+      // Return the image data.
+      pipePromise.then(() => resolve(img)).catch(onError);
     });
 
     fetchStream.once('error', onError);
