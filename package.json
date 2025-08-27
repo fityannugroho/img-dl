@@ -57,6 +57,19 @@
     "meow": "^13.2.0",
     "p-queue": "^8.1.0",
     "sanitize-filename": "^1.6.3",
-    "sharp": "^0.33.5"
+    "sharp": "^0.34.3"
+  },
+  "pnpm": {
+    "supportedArchitectures": {
+      "os": [
+        "linux",
+        "win32",
+        "darwin"
+      ],
+      "cpu": [
+        "x64",
+        "arm64"
+      ]
+    }
   }
 }
