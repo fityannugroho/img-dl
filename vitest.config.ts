@@ -1,11 +1,12 @@
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { defaultExclude, defineConfig } from 'vitest/config';
 
 export default defineConfig({
   test: {
     root: './',
     alias: {
-      '~': path.resolve(import.meta.dirname, './src'),
+      '~': path.resolve(path.dirname(fileURLToPath(import.meta.url)), './src'),
     },
     setupFiles: ['test/setup.ts'],
     coverage: {
