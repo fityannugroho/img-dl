@@ -278,13 +278,17 @@ describe('`download`', () => {
     });
   });
 
-  it.each(['/root', '/restricted-dir'])(
-    'throw error if directory cannot be created: `%s`',
-    async (directory) => {
-      const image = parseImageParams(`${BASE_URL}/image.jpg`, { directory });
-      await expect(download(image)).rejects.toThrow(DirectoryError);
-    },
-  );
+  it.each([
+    process.platform === 'win32'
+      ? 'C:\\nonexistent\\restricted\\directory'
+      : '/nonexistent/restricted/directory',
+    process.platform === 'win32'
+      ? 'C:\\another\\invalid\\path'
+      : '/another/invalid/path',
+  ])('throw error if directory cannot be created: `%s`', async (directory) => {
+    const image = parseImageParams(`${BASE_URL}/image.jpg`, { directory });
+    await expect(download(image)).rejects.toThrow(DirectoryError);
+  });
 
   it.for(['tmp', 'test/tmp'])(
     'create the directory if it does not exist: `%s`',

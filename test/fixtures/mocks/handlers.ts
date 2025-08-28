@@ -16,7 +16,11 @@ export const handlers = [
     let { imageName } = params; // string or array
 
     if (typeof imageName !== 'string') {
-      imageName = imageName[0];
+      imageName = imageName?.[0];
+    }
+
+    if (!imageName) {
+      return HttpResponse.json('Not Found', { status: 404 });
     }
 
     // Use DEFAULT_IMAGE_NAME if the image name begins with 'img-' followed by a number.

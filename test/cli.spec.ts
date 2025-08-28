@@ -133,7 +133,12 @@ describe('cli', async () => {
   );
 
   it('should throw an error if the directory cannot be created', async () => {
-    const { stderr } = await $`node ${dist}/cli.js ${testUrl} --dir=/root`;
+    const invalidDir =
+      process.platform === 'win32'
+        ? 'C:\\nonexistent\\restricted\\directory'
+        : '/nonexistent/restricted/directory';
+    const { stderr } =
+      await $`node ${dist}/cli.js ${testUrl} --dir=${invalidDir}`;
     expect(stderr).contain('DirectoryError');
   });
 
