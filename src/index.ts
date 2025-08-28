@@ -4,8 +4,8 @@ import PQueue from 'p-queue';
 import { DEFAULT_INTERVAL, DEFAULT_STEP } from './constanta.js';
 import {
   DownloadOptions,
-  ImageOptions,
   download,
+  ImageOptions,
   parseImageParams,
 } from './downloader.js';
 

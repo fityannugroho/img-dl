@@ -1,5 +1,5 @@
 {
-  "$schema": "https://biomejs.dev/schemas/1.9.4/schema.json",
+  "$schema": "https://biomejs.dev/schemas/2.2.2/schema.json",
   "vcs": {
     "enabled": false,
     "clientKind": "git",
@@ -7,7 +7,13 @@
   },
   "files": {
     "ignoreUnknown": true,
-    "ignore": ["node_modules", "dist", "coverage", "pnpm-lock.yaml"]
+    "includes": [
+      "**",
+      "!**/node_modules",
+      "!**/dist",
+      "!**/coverage",
+      "!**/pnpm-lock.yaml"
+    ]
   },
   "formatter": {
     "enabled": true,
@@ -19,10 +25,14 @@
     "lineWidth": 80,
     "attributePosition": "auto",
     "bracketSpacing": true,
-    "ignore": ["**/pnpm-lock.yaml"]
+    "includes": ["**", "!**/pnpm-lock.yaml"]
   },
-  "organizeImports": {
-    "enabled": true
+  "assist": {
+    "actions": {
+      "source": {
+        "organizeImports": "on"
+      }
+    }
   },
   "linter": {
     "enabled": true,
@@ -31,22 +41,23 @@
       "correctness": {
         "noUndeclaredVariables": "error",
         "noUnusedPrivateClassMembers": "error",
-        "noUnusedVariables": "error",
-        "useArrayLiterals": "error"
+        "noUnusedVariables": "error"
       },
       "style": {
         "noNamespace": "error",
-        "useBlockStatements": "off"
+        "useBlockStatements": "off",
+        "useArrayLiterals": "error"
       },
       "suspicious": {
         "noEmptyBlockStatements": "error"
       }
     },
-    "ignore": [
-      "node_modules/**/*",
-      "dist/**/*",
-      "coverage/*/*",
-      "pnpm-lock.yaml"
+    "includes": [
+      "**",
+      "!**/node_modules/**/*",
+      "!**/dist/**/*",
+      "!**/coverage/**/*/*",
+      "!**/pnpm-lock.yaml"
     ]
   },
   "javascript": {
