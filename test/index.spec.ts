@@ -16,7 +16,7 @@ import DirectoryError from '~/errors/DirectoryError.js';
 import imgdl, { type Image } from '~/index.js';
 import { BASE_URL } from './fixtures/mocks/handlers.js';
 import { server } from './fixtures/mocks/node.js';
-import { TEST_TMP_DIR } from './helpers/paths.js';
+import { TEST_TMP_DIR, UNCREATABLE_DIR } from './helpers/paths.js';
 
 describe('`imgdl`', () => {
   /**
@@ -26,8 +26,10 @@ describe('`imgdl`', () => {
   const ROOT_CWD = process.cwd();
 
   beforeAll(async () => {
-    // Use a shared temp directory for all filesystem writes
-    process.chdir(TEST_TMP_DIR);
+    // Use a unique temp directory for this test file
+    const cwd = path.resolve(TEST_TMP_DIR, 'index');
+    await fs.mkdir(cwd, { recursive: true });
+    process.chdir(cwd);
     server.listen();
   });
 
@@ -120,7 +122,7 @@ describe('`imgdl`', () => {
 
     await expect(
       imgdl(`${BASE_URL}/image.jpg`, {
-        directory: '/restricted-dir',
+        directory: UNCREATABLE_DIR,
         onError: (err) => {
           error = err;
         },

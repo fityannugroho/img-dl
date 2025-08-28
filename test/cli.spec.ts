@@ -4,7 +4,7 @@ import { $ } from 'execa';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import ArgumentError from '~/errors/ArgumentError.js';
 import { generateDownloadUrls } from '~/utils.js';
-import { TEST_TMP_DIR } from './helpers/paths.js';
+import { TEST_TMP_DIR, UNCREATABLE_DIR } from './helpers/paths.js';
 
 describe('generateDownloadUrls', () => {
   it('return the same URLs if increment flag is not set', () => {
@@ -73,6 +73,8 @@ describe('cli', async () => {
   beforeAll(async () => {
     // Build CLI from repo root
     await $`tsup src/cli.ts --format esm -d ${dist} --clean`;
+    // Ensure CLI temp cwd exists
+    await fs.mkdir(path.resolve(TEST_TMP_DIR, 'cli'), { recursive: true });
   });
 
   afterAll(async () => {
@@ -97,12 +99,14 @@ describe('cli', async () => {
     expect(stdout).contains('USAGE').contains('PARAMETERS').contains('OPTIONS');
   });
 
-  // Run CLI in the shared tmp directory to consolidate test outputs
-  const $$ = $({ cwd: TEST_TMP_DIR });
+  // Run CLI in its own tmp directory to avoid cross-test interference
+  const $$ = $({ cwd: path.resolve(TEST_TMP_DIR, 'cli') });
 
   it('should throw an error if the directory cannot be created', async () => {
-    const { stderr } =
-      await $$`node ${path.resolve(dist, 'cli.js')} ${testUrl} --dir=/root`;
+    const { stderr } = await $$`node ${path.resolve(
+      dist,
+      'cli.js',
+    )} ${testUrl} --dir=${UNCREATABLE_DIR}`;
     expect(stderr).contain('DirectoryError');
   });
 
