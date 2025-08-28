@@ -9,12 +9,15 @@ import ArgumentError from '~/errors/ArgumentError.js';
 import DirectoryError from '~/errors/DirectoryError.js';
 import { BASE_URL } from './fixtures/mocks/handlers.js';
 import { server } from './fixtures/mocks/node.js';
-import { TEST_TMP_DIR } from './helpers/paths.js';
+import { TEST_TMP_DIR, UNCREATABLE_DIR } from './helpers/paths.js';
 
 // Use a shared temp directory for all filesystem writes in this file
 const ROOT_CWD = process.cwd();
 beforeAll(async () => {
-  process.chdir(TEST_TMP_DIR);
+  const cwd = path.resolve(TEST_TMP_DIR, 'downloader');
+  await fs.promises.mkdir(cwd, { recursive: true });
+  process.chdir(cwd);
+  server.listen();
 });
 afterAll(async () => {
   process.chdir(ROOT_CWD);
@@ -288,13 +291,12 @@ describe('`download`', () => {
     });
   });
 
-  it.each(['/root', '/restricted-dir'])(
-    'throw error if directory cannot be created: `%s`',
-    async (directory) => {
-      const image = parseImageParams(`${BASE_URL}/image.jpg`, { directory });
-      await expect(download(image)).rejects.toThrow(DirectoryError);
-    },
-  );
+  it('throw error if directory cannot be created', async () => {
+    const image = parseImageParams(`${BASE_URL}/image.jpg`, {
+      directory: UNCREATABLE_DIR,
+    });
+    await expect(download(image)).rejects.toThrow(DirectoryError);
+  });
 
   it.for(['tmp', 'test/tmp'])(
     'create the directory if it does not exist: `%s`',

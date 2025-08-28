@@ -192,11 +192,12 @@ export async function download(img: Image, options: DownloadOptions = {}) {
     signal: options.signal,
   });
 
-  const writeStream = fs.createWriteStream(img.path);
+  let writeStream: fs.WriteStream | undefined;
 
   return await new Promise<Image>((resolve, reject) => {
     const onError = async (error: unknown) => {
-      // Clean up partially downloaded files if an error occurs
+      // Ensure we close any open write stream, then clean up partial file
+      writeStream?.destroy();
       await fs.promises.rm(img.path, { force: true });
       reject(error);
     };
@@ -210,6 +211,9 @@ export async function download(img: Image, options: DownloadOptions = {}) {
 
       // Prevent `onError` being called twice.
       fetchStream.off('error', onError);
+
+      // Create the write stream only after we’ve validated the response
+      writeStream = fs.createWriteStream(img.path);
 
       let pipePromise: Promise<void>;
 
