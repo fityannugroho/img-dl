@@ -38,8 +38,14 @@ Image with different extension will be considered as **different** file, so it w
 
 ## Prerequisites
 
-- Node.js 20.9 or later
-- npm 10 or later
+- Node.js 20.11 or later
+- pnpm 9 or later
+
+## Platform Support
+
+This package supports Windows, macOS, and Linux.
+
+**Note for Windows users:** This package uses Sharp for image processing. Sharp includes prebuilt binaries for Windows, so no additional build tools are required.
 
 ## Installation
 
@@ -48,13 +54,13 @@ Image with different extension will be considered as **different** file, so it w
 Install globally:
 
 ```bash
-npm install -g img-dl
+pnpm install -g img-dl
 ```
 
 Install locally:
 
 ```bash
-npm install img-dl
+pnpm install img-dl
 ```
 
 ## Usage

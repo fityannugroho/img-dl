@@ -37,7 +37,7 @@
   "homepage": "https://github.com/fityannugroho/img-dl#readme",
   "funding": "https://github.com/sponsors/fityannugroho",
   "engines": {
-    "node": ">=20.9"
+    "node": ">=20.11"
   },
   "devDependencies": {
     "@biomejs/biome": "2.2.2",
