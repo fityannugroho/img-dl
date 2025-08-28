@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { HttpResponse, http } from 'msw';
 
 const DEFAULT_IMAGE_NAME = 'image';
@@ -16,6 +17,7 @@ export const handlers = [
     let { imageName } = params; // string or array
 
     if (typeof imageName !== 'string') {
+      // @ts-expect-error `imageName` can be array
       imageName = imageName[0];
     }
 
@@ -38,7 +40,11 @@ export const handlers = [
       }
     }
 
-    const imagePath = path.resolve(import.meta.dirname, '..', imageName);
+    const imagePath = path.resolve(
+      path.dirname(fileURLToPath(import.meta.url)),
+      '..',
+      imageName,
+    );
 
     // Return 404 if the image path doesn't exist.
     if (!fs.existsSync(imagePath)) {
