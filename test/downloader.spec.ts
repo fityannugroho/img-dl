@@ -9,6 +9,16 @@ import ArgumentError from '~/errors/ArgumentError.js';
 import DirectoryError from '~/errors/DirectoryError.js';
 import { BASE_URL } from './fixtures/mocks/handlers.js';
 import { server } from './fixtures/mocks/node.js';
+import { TEST_TMP_DIR } from './helpers/paths.js';
+
+// Use a shared temp directory for all filesystem writes in this file
+const ROOT_CWD = process.cwd();
+beforeAll(async () => {
+  process.chdir(TEST_TMP_DIR);
+});
+afterAll(async () => {
+  process.chdir(ROOT_CWD);
+});
 
 describe('parseImageParams', () => {
   describe('url', () => {

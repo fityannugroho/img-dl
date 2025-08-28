@@ -16,14 +16,20 @@ import DirectoryError from '~/errors/DirectoryError.js';
 import imgdl, { type Image } from '~/index.js';
 import { BASE_URL } from './fixtures/mocks/handlers.js';
 import { server } from './fixtures/mocks/node.js';
+import { TEST_TMP_DIR } from './helpers/paths.js';
 
 describe('`imgdl`', () => {
   /**
    * The directory to save the downloaded images.
    */
   const directory = 'test/tmp';
+  const ROOT_CWD = process.cwd();
 
-  beforeAll(() => server.listen());
+  beforeAll(async () => {
+    // Use a shared temp directory for all filesystem writes
+    process.chdir(TEST_TMP_DIR);
+    server.listen();
+  });
 
   afterEach(() => server.resetHandlers());
 
@@ -32,6 +38,8 @@ describe('`imgdl`', () => {
 
     // Remove the `tmp` directory
     await fs.rm(directory, { force: true, recursive: true });
+    // Restore original working directory
+    process.chdir(ROOT_CWD);
   });
 
   it('should download an image if single URL is provided', async ({

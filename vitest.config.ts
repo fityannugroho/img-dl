@@ -7,6 +7,7 @@ export default defineConfig({
     alias: {
       '~': path.resolve(import.meta.dirname, './src'),
     },
+    setupFiles: ['test/setup.ts'],
     coverage: {
       provider: 'v8',
       exclude: [...defaultExclude, 'src/cli.ts'],
