@@ -122,6 +122,28 @@ async function bootstrap() {
     );
   }
 
+  // If user specified a directory that exists but is not a directory (a file),
+  // fail fast with DirectoryError so CLI prints a friendly error instead of
+  // crashing with an unhandled ENOTDIR during download.
+  if (flags.dir) {
+    try {
+      const stat = fs.statSync(flags.dir);
+      if (!stat.isDirectory()) {
+        throw new DirectoryError('The provided path is not a directory');
+      }
+    } catch (err) {
+      // If error is that the path does not exist, ignore and let downloader create it.
+      if ((err as NodeJS.ErrnoException).code === 'ENOENT') {
+        // noop
+      } else if (err instanceof DirectoryError) {
+        throw err;
+      } else {
+        // Other errors (permission) should be reported as DirectoryError
+        throw new DirectoryError((err as Error).message);
+      }
+    }
+  }
+
   const separator = dimLog('|');
   const bar = new cliProgress.SingleBar({
     format: `{percentage}% [{bar}] {value}/{total} ${separator} ${successLog('✅ {success}')} ${separator} ${errorLog('❌ {errorCount}')} ${separator} ETA: {eta_formatted} ${dimLog('/ {duration_formatted}')}`,

@@ -194,6 +194,24 @@ export async function download(img: Image, options: DownloadOptions = {}) {
 
   const writeStream = fs.createWriteStream(img.path);
 
+  // Attach an error handler to the write stream immediately so errors that
+  // occur before the response pipeline is attached (for example ENOTDIR)
+  // are handled and don't crash the process.
+  writeStream.once('error', async (err: NodeJS.ErrnoException) => {
+    // Normalize filesystem errors to DirectoryError when appropriate
+    const code = err?.code;
+    if (code === 'ENOTDIR' || code === 'EACCES' || code === 'EPERM') {
+      await fs.promises.rm(img.path, { force: true }).catch(() => undefined);
+      // Reject with DirectoryError so callers (CLI/tests) can handle it
+      // Convert to DirectoryError by emitting through the fetchStream error
+      fetchStream.destroy(new DirectoryError((err as Error).message));
+      return;
+    }
+
+    // For other errors, destroy the fetch stream to trigger cleanup
+    fetchStream.destroy(err as Error);
+  });
+
   return await new Promise<Image>((resolve, reject) => {
     const onError = async (error: unknown) => {
       // Clean up partially downloaded files if an error occurs
