@@ -104,9 +104,8 @@ const errorLog = chalk.bold.red;
 const warningLog = chalk.yellow;
 const dimLog = chalk.dim;
 
-async function bootstrap() {
-  const { flags } = cli;
-  const urls = generateDownloadUrls(cli.input, flags);
+export async function runner(input: string[], flags: typeof cli.flags) {
+  const urls = generateDownloadUrls(input, flags);
 
   if (flags.version) {
     cli.showVersion();
@@ -208,6 +207,13 @@ async function bootstrap() {
       }
     }
   }
+}
+
+async function bootstrap() {
+  const { flags } = cli;
+  const urls = generateDownloadUrls(cli.input, flags);
+
+  await runner(urls, flags);
 }
 
 bootstrap().catch((error: Error) => {
