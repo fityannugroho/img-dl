@@ -184,7 +184,8 @@ describe('cli', () => {
 
       // Check that files were downloaded to the custom directory
       const files = await fs.promises.readdir(customDir);
-      expect(files.some((file) => file.endsWith('.jpg'))).toBe(true);
+      const jpgFiles = files.filter((f) => f.toLowerCase().endsWith('.jpg'));
+      expect(jpgFiles.length).toBe(1);
 
       // Check that error.log would be in the custom directory (not in TEST_CLI_DIR)
       const customErrorLogExists = await fs.promises
@@ -290,6 +291,92 @@ describe('cli', () => {
       await expect(runner(input, flags)).resolves.toBeUndefined();
 
       // Ensure no errors were logged to error.log
+      expect(await hasErrorLogContent()).toBe(false);
+    });
+  });
+
+  describe('File input', () => {
+    it('supports JSON array of URLs', async () => {
+      const filePath = path.join(TEST_CLI_DIR, 'urls.json');
+      const data = [`${BASE_URL}/image.jpg`, `${BASE_URL}/img-1.jpg`];
+      await fs.promises.writeFile(filePath, JSON.stringify(data), 'utf8');
+
+      const flags: CliFlags = {} as CliFlags;
+      const input = [filePath];
+
+      await expect(runner(input, flags)).resolves.toBeUndefined();
+
+      // Ensure images were downloaded
+      const files = await fs.promises.readdir(TEST_CLI_DIR);
+      const jpgFiles = files.filter((f) => f.toLowerCase().endsWith('.jpg'));
+      expect(jpgFiles.length).toBe(2);
+      expect(await hasErrorLogContent()).toBe(false);
+    });
+
+    it('supports JSON array of objects with options', async () => {
+      const filePath = path.join(TEST_CLI_DIR, 'list.json');
+      const customDir = path.join(TEST_CLI_DIR, 'avatars');
+      const data = [
+        {
+          url: `${BASE_URL}/image.jpg`,
+          directory: 'avatars',
+          name: 'me',
+          extension: 'png',
+        },
+        {
+          url: `${BASE_URL}/img-1.jpg`,
+          directory: 'avatars',
+          name: 'img1',
+        },
+      ];
+      await fs.promises.writeFile(filePath, JSON.stringify(data), 'utf8');
+
+      const flags: CliFlags = {} as CliFlags;
+      const input = [filePath];
+
+      await expect(runner(input, flags)).resolves.toBeUndefined();
+
+      const files = await fs.promises.readdir(customDir);
+      // One PNG and one JPG
+      expect(files.some((f) => f === 'me.png')).toBe(true);
+      expect(files.some((f) => f === 'img1.jpg')).toBe(true);
+      expect(await hasErrorLogContent()).toBe(false);
+    });
+
+    it('supports CSV with header', async () => {
+      const filePath = path.join(TEST_CLI_DIR, 'list.csv');
+      const customDir = path.join(TEST_CLI_DIR, 'friends');
+      const csv = [
+        'url,directory,name,extension',
+        `"${BASE_URL}/image.jpg","friends","john","png"`,
+        `"${BASE_URL}/img-1.jpg","friends","jane",""`,
+      ].join('\n');
+      await fs.promises.writeFile(filePath, csv, 'utf8');
+
+      const flags: CliFlags = {} as CliFlags;
+      const input = [filePath];
+
+      await expect(runner(input, flags)).resolves.toBeUndefined();
+
+      const files = await fs.promises.readdir(customDir);
+      expect(files.includes('john.png')).toBe(true);
+      expect(files.includes('jane.jpg')).toBe(true);
+      expect(await hasErrorLogContent()).toBe(false);
+    });
+
+    it('supports TXT with URLs per line', async () => {
+      const filePath = path.join(TEST_CLI_DIR, 'urls.txt');
+      const txt = [`${BASE_URL}/image.jpg`, `${BASE_URL}/img-1.jpg`].join('\n');
+      await fs.promises.writeFile(filePath, txt, 'utf8');
+
+      const flags: CliFlags = {} as CliFlags;
+      const input = [filePath];
+
+      await expect(runner(input, flags)).resolves.toBeUndefined();
+
+      const files = await fs.promises.readdir(TEST_CLI_DIR);
+      const jpgFiles = files.filter((f) => f.toLowerCase().endsWith('.jpg'));
+      expect(jpgFiles.length).toBe(2);
       expect(await hasErrorLogContent()).toBe(false);
     });
   });

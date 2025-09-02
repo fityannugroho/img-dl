@@ -7,18 +7,20 @@ import cliProgress from 'cli-progress';
 import meow from 'meow';
 import ArgumentError from './errors/ArgumentError.js';
 import DirectoryError from './errors/DirectoryError.js';
-import imgdl, { type Options } from './index.js';
-import { generateDownloadUrls } from './utils.js';
+import imgdl, { type ImageOptions, type Options } from './index.js';
+import { generateDownloadUrls, isFilePath, parseFileInput } from './utils.js';
 
 const cli = meow(
   `
   USAGE
     $ imgdl <url> ... [OPTIONS]
+    $ imgdl <path> [OPTIONS]
 
   PARAMETERS
     url   The URL of the image to download. Provide multiple URLs to download multiple images.
           In increment mode, the URL must contain {i} placeholder for the index,
-          only one URL is allowed, and the 'end' flag is required.
+          only one URL is allowed, and the '--end' flag is required.
+    path  The path to a local file that contains a list of image URLs.
 
   OPTIONS
     -d, --dir=<path>          The output directory. Default: current working directory
@@ -43,6 +45,9 @@ const cli = meow(
     $ imgdl https://example.com/image.jpg https://example.com/image2.webp
     $ imgdl https://example.com/image-{i}.jpg --increment --start=1 --end=10
     $ imgdl https://example.com/image.jpg --header="User-Agent: Mozilla/5.0" --header="Cookie: foo=bar"
+    $ imgdl /path/to/list.txt
+    $ imgdl /path/to/list.csv
+    $ imgdl /path/to/list.json
 `,
   {
     importMeta: import.meta,
@@ -104,14 +109,30 @@ const errorLog = chalk.bold.red;
 const warningLog = chalk.yellow;
 const dimLog = chalk.dim;
 
-export async function runner(input: string[], flags: typeof cli.flags) {
-  const urls = generateDownloadUrls(input, flags);
+export async function runner(
+  input: (string | ({ url: string } & ImageOptions))[],
+  flags: typeof cli.flags,
+) {
+  let sources: (string | ({ url: string } & ImageOptions))[] = [];
+
+  // Single file input support: .json, .csv, .txt
+  if (
+    input.length === 1 &&
+    typeof input[0] === 'string' &&
+    isFilePath(input[0])
+  ) {
+    sources = parseFileInput(input[0]);
+  } else if (input.every((i) => typeof i === 'string')) {
+    sources = generateDownloadUrls(input as string[], flags);
+  } else {
+    sources = input;
+  }
 
   if (flags.version) {
     cli.showVersion();
   }
 
-  if (!urls.length) {
+  if (!sources.length) {
     cli.showHelp(0);
   }
 
@@ -130,8 +151,8 @@ export async function runner(input: string[], flags: typeof cli.flags) {
   let success = 0;
   let errorCount = 0;
 
-  if (!flags.silent && urls.length > 1) {
-    bar.start(urls.length, 0, { success, errorCount });
+  if (!flags.silent && sources.length > 1) {
+    bar.start(sources.length, 0, { success, errorCount });
   }
 
   // Validate and convert headers
@@ -150,15 +171,16 @@ export async function runner(input: string[], flags: typeof cli.flags) {
 
   const abortController = new AbortController();
 
-  process.on('SIGINT', () => {
+  const onSigint = () => {
     bar.stop();
     console.log(dimLog('\nAborting...'));
     abortController.abort();
-  });
+  };
+  process.on('SIGINT', onSigint);
 
   try {
     await new Promise<void>((resolve, rejects) => {
-      imgdl(urls, {
+      imgdl(sources, {
         directory: flags.dir,
         name: flags.name,
         extension: flags.ext,
@@ -194,6 +216,9 @@ export async function runner(input: string[], flags: typeof cli.flags) {
       }).then(resolve, rejects);
     });
   } finally {
+    // Always cleanup the SIGINT listener to avoid leaks in repeated invocations (e.g., tests)
+    process.off('SIGINT', onSigint);
+
     if (!flags.silent) {
       bar.stop();
       console.log(dimLog('Done!'));
@@ -211,9 +236,7 @@ export async function runner(input: string[], flags: typeof cli.flags) {
 
 async function bootstrap() {
   const { flags } = cli;
-  const urls = generateDownloadUrls(cli.input, flags);
-
-  await runner(urls, flags);
+  await runner(cli.input, flags);
 }
 
 bootstrap().catch((error: Error) => {
