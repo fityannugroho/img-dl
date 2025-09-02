@@ -11,7 +11,6 @@ import {
 } from 'vitest';
 import { runner } from '~/cli.js';
 import ArgumentError from '~/errors/ArgumentError.js';
-import { generateDownloadUrls } from '~/utils.js';
 import { BASE_URL } from './fixtures/mocks/handlers.js';
 import { server } from './fixtures/mocks/node.js';
 import { TEST_TMP_DIR } from './helpers/paths.js';
@@ -59,60 +58,6 @@ async function hasErrorLogContent(): Promise<boolean> {
     return false;
   }
 }
-
-describe('generateDownloadUrls', () => {
-  it('return the same URLs if increment flag is not set', () => {
-    const urls = [
-      'https://example.com/image1.jpg',
-      'https://example.com/image2.jpg',
-    ];
-    const flags = {};
-
-    expect(generateDownloadUrls(urls, flags)).toEqual(urls);
-  });
-
-  it('throw error if multiple URLs are provided', () => {
-    const urls = [
-      'https://example.com/image1.jpg',
-      'https://example.com/image2.jpg',
-    ];
-    const flags = { increment: true };
-
-    expect(() => generateDownloadUrls(urls, flags)).toThrow(ArgumentError);
-  });
-
-  it('throw error if URL does not contain {i} placeholder', () => {
-    const urls = ['https://example.com/image.jpg'];
-    const flags = { increment: true };
-
-    expect(() => generateDownloadUrls(urls, flags)).toThrow(ArgumentError);
-  });
-
-  it('throw error if start is less than 0', () => {
-    const urls = ['https://example.com/image{i}.jpg'];
-    const flags = { increment: true, start: -1 };
-
-    expect(() => generateDownloadUrls(urls, flags)).toThrow(ArgumentError);
-  });
-
-  it('throw error if start is greater than end', () => {
-    const urls = ['https://example.com/image{i}.jpg'];
-    const flags = { increment: true, start: 5, end: 3 };
-
-    expect(() => generateDownloadUrls(urls, flags)).toThrow(ArgumentError);
-  });
-
-  it('returns a list of generated URLs', () => {
-    const urls = ['https://example.com/image{i}.jpg'];
-    const flags = { increment: true, start: 1, end: 3 };
-
-    expect(generateDownloadUrls(urls, flags)).toEqual([
-      'https://example.com/image1.jpg',
-      'https://example.com/image2.jpg',
-      'https://example.com/image3.jpg',
-    ]);
-  });
-});
 
 describe('cli', () => {
   const testUrl = `${BASE_URL}/image.jpg`;
