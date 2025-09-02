@@ -13,3 +13,9 @@ export const UNCREATABLE_DIR =
   process.platform === 'win32'
     ? 'C:\\invalid*dir'
     : '/root/__imgdl_uncreatable__';
+
+// A path that should fail even with elevated permissions
+export const TRULY_UNWRITABLE_DIR =
+  process.platform === 'win32'
+    ? 'C:\\Windows\\System32\\drivers\\etc\\non-existent-subdir\\image.jpg'
+    : '/dev/null/subdir';
