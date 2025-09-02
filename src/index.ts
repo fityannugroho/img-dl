@@ -117,10 +117,10 @@ async function imgdl(
       // Make sure the name is unique in the destination directory
       const nameKey = `${img.directory}/${img.name}.${img.extension}`;
       const currentCount = countNames.get(nameKey) || 0;
-      countNames.set(nameKey, currentCount + 1);
 
       // Add suffix for duplicates
       img.name = img.name + (currentCount > 0 ? ` (${currentCount})` : '');
+      countNames.set(nameKey, currentCount + 1);
       // Always rebuild path to handle suffix changes
       img.path = path.resolve(img.directory, `${img.name}.${img.extension}`);
 
