@@ -97,6 +97,9 @@ EXAMPLES
   $ imgdl https://example.com/image.jpg https://example.com/image2.webp
   $ imgdl https://example.com/image-{i}.jpg --increment --start=1 --end=10
   $ imgdl https://example.com/image.jpg --header="User-Agent: Mozilla/5.0" --header="Cookie: foo=bar"
+  $ imgdl /path/to/list.json
+  $ imgdl /path/to/list.csv
+  $ imgdl /path/to/list.txt
 ```
 
 #### Simple download
@@ -115,6 +118,49 @@ imgdl https://example.com/image.jpg https://example.com/image2.jpg
 
 ```bash
 imgdl https://example.com/image-{i}.jpg --increment --start=1 --end=10
+```
+
+#### Download from file (JSON/CSV/TXT)
+
+- JSON array of URLs:
+
+```json
+[
+  "https://example.com/me/avatar.jpg",
+  "https://example.com/janedoe/avatar.jpg"
+]
+```
+
+- JSON array of objects with per-item options:
+
+```json
+[
+  { "url": "https://example.com/me/avatar.jpg", "directory": "myimages", "name": "myavatar", "extension": "png" },
+  { "url": "https://example.com/janedoe/avatar.jpg", "directory": "friends", "name": "janedoe" }
+]
+```
+
+- CSV with header (url,directory,name,extension):
+
+```csv
+url,directory,name,extension
+"https://example.com/me/avatar.jpg","myimages","myavatar","png"
+"https://example.com/janedoe/avatar.jpg","friends","janedoe",""
+```
+
+- TXT (one URL per line):
+
+```text
+https://example.com/me/avatar.jpg
+https://example.com/janedoe/avatar.jpg
+```
+
+Command examples:
+
+```bash
+imgdl /path/to/list.json
+imgdl /path/to/list.csv
+imgdl /path/to/list.txt
 ```
 
 ### Programmatically
