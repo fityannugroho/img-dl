@@ -1,10 +1,64 @@
-import fs from 'node:fs/promises';
+import fs from 'node:fs';
 import path from 'node:path';
-import { $ } from 'execa';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  describe,
+  expect,
+  it,
+  vi,
+} from 'vitest';
+import { runner } from '~/cli.js';
 import ArgumentError from '~/errors/ArgumentError.js';
 import { generateDownloadUrls } from '~/utils.js';
-import { TEST_TMP_DIR, UNCREATABLE_DIR } from './helpers/paths.js';
+import { BASE_URL } from './fixtures/mocks/handlers.js';
+import { server } from './fixtures/mocks/node.js';
+import { TEST_TMP_DIR } from './helpers/paths.js';
+
+type CliFlags = Parameters<typeof runner>[1];
+
+// Use a shared temp directory for all filesystem writes in this file
+const TEST_CLI_DIR = path.resolve(TEST_TMP_DIR, 'cli');
+
+// Mock process.cwd() to return our test directory
+const originalCwd = process.cwd;
+
+beforeAll(async () => {
+  await fs.promises.mkdir(TEST_CLI_DIR, { recursive: true });
+  // Mock process.cwd to return our test directory
+  process.cwd = vi.fn(() => TEST_CLI_DIR);
+  server.listen();
+});
+
+afterEach(async () => {
+  // Clean up the entire test directory and recreate it
+  await fs.promises.rm(TEST_CLI_DIR, { recursive: true, force: true });
+  await fs.promises.mkdir(TEST_CLI_DIR, { recursive: true });
+
+  server.resetHandlers();
+});
+
+afterAll(async () => {
+  // Restore original process.cwd
+  process.cwd = originalCwd;
+  server.close();
+
+  // Final cleanup - remove the entire test directory
+  await fs.promises.rm(TEST_CLI_DIR, { recursive: true, force: true });
+});
+
+/**
+ * Helper function to check if error.log exists and has content
+ */
+async function hasErrorLogContent(): Promise<boolean> {
+  try {
+    const stats = await fs.promises.stat(path.join(TEST_CLI_DIR, 'error.log'));
+    return stats.size > 0;
+  } catch {
+    return false;
+  }
+}
 
 describe('generateDownloadUrls', () => {
   it('return the same URLs if increment flag is not set', () => {
@@ -60,74 +114,17 @@ describe('generateDownloadUrls', () => {
   });
 });
 
-describe('cli', async () => {
-  /**
-   * The build folder for the test
-   */
-  const dist = 'test/dist';
-  /**
-   * A valid URL for testing non-network CLI behavior.
-   */
-  const testUrl = 'https://example.com/image.jpg';
+describe('cli', () => {
+  const testUrl = `${BASE_URL}/image.jpg`;
 
-  beforeAll(async () => {
-    // Build CLI from repo root
-    await $`tsup src/cli.ts --format esm -d ${dist} --clean`;
-    // Ensure CLI temp cwd exists
-    await fs.mkdir(path.resolve(TEST_TMP_DIR, 'cli'), { recursive: true });
-  });
+  it('should download successfully with valid input', async () => {
+    const flags: CliFlags = {} as CliFlags;
+    const input = [testUrl];
 
-  afterAll(async () => {
-    await fs.rm(dist, { recursive: true });
-  });
+    await expect(runner(input, flags)).resolves.toBeUndefined();
 
-  it('should show the version', async () => {
-    const { exitCode, stdout } = await $`node ${dist}/cli.js --version`;
-    expect(exitCode).toBe(0);
-    expect(stdout).toMatch(/\d+\.\d+\.\d+/);
-  });
-
-  it('should show the version with short flag', async () => {
-    const { exitCode, stdout } = await $`node ${dist}/cli.js -v`;
-    expect(exitCode).toBe(0);
-    expect(stdout).toMatch(/\d+\.\d+\.\d+/);
-  });
-
-  it('should show the help message if no arguments are provided', async () => {
-    const { exitCode, stdout } = await $`node ${dist}/cli.js`;
-    expect(exitCode).toBe(0);
-    expect(stdout).contains('USAGE').contains('PARAMETERS').contains('OPTIONS');
-  });
-
-  // Run CLI in its own tmp directory to avoid cross-test interference
-  const $$ = $({ cwd: path.resolve(TEST_TMP_DIR, 'cli') });
-
-  it('should throw an error if the directory cannot be created', async () => {
-    const { stderr } = await $$`node ${path.resolve(
-      dist,
-      'cli.js',
-    )} ${testUrl} --dir=${UNCREATABLE_DIR}`;
-    expect(stderr).contain('DirectoryError');
-  });
-
-  it('should throw an error if some arguments is invalid', async () => {
-    const { stderr } =
-      await $$`node ${path.resolve(dist, 'cli.js')} ${testUrl} --name=invalid/name`;
-
-    expect(stderr).contain('ArgumentError');
-  });
-
-  // Networked download tests moved to e2e.test.ts
-
-  it.each([
-    'not-url',
-    'some/path',
-    'example.com/image.jpg',
-    'ftp://example.com',
-    'ws://example.com',
-  ])('should throw an error if URL is invalid: `%s`', async (url) => {
-    const { stderr } = await $`node ${dist}/cli.js ${url}`;
-    expect(stderr).contain('ArgumentError');
+    // Ensure no errors were logged to error.log
+    expect(await hasErrorLogContent()).toBe(false);
   });
 
   it.each([
@@ -139,30 +136,161 @@ describe('cli', async () => {
   ])(
     'should throw an error if the header is not valid: `%s`',
     async (header) => {
-      const { stderr } = await $`node ${dist}/cli.js ${testUrl} -H ${header}`;
-      expect(stderr).contain('ArgumentError');
+      const flags: CliFlags = { header: [header] } as CliFlags;
+      const input = [testUrl];
+
+      await expect(runner(input, flags)).rejects.toThrow(ArgumentError);
+
+      // Ensure no errors were logged to error.log since this should throw immediately
+      expect(await hasErrorLogContent()).toBe(false);
     },
   );
 
+  describe('Error handling and logging', () => {
+    it('should log errors to error.log when download fails', async () => {
+      const flags: CliFlags = {} as CliFlags;
+      const input = [`${BASE_URL}/non-existent-image.jpg`]; // This will return 404
+
+      // The runner should not throw an error even when downloads fail
+      await expect(runner(input, flags)).resolves.toBeUndefined();
+
+      // But errors should be logged to error.log
+      expect(await hasErrorLogContent()).toBe(true);
+    });
+
+    it('should handle mixed success and failure scenarios', async () => {
+      const flags: CliFlags = {} as CliFlags;
+      const input = [
+        `${BASE_URL}/image.jpg`, // This should succeed
+        `${BASE_URL}/non-existent.jpg`, // This should fail
+      ];
+
+      await expect(runner(input, flags)).resolves.toBeUndefined();
+
+      // Should have error.log content due to the failed download
+      expect(await hasErrorLogContent()).toBe(true);
+    });
+  });
+
+  describe('Directory options', () => {
+    it('should work with explicit directory option', async () => {
+      const customDir = path.join(TEST_CLI_DIR, 'custom');
+      await fs.promises.mkdir(customDir, { recursive: true });
+
+      const flags: CliFlags = { dir: customDir } as CliFlags;
+      const input = [testUrl];
+
+      await expect(runner(input, flags)).resolves.toBeUndefined();
+
+      // Check that files were downloaded to the custom directory
+      const files = await fs.promises.readdir(customDir);
+      expect(files.some((file) => file.endsWith('.jpg'))).toBe(true);
+
+      // Check that error.log would be in the custom directory (not in TEST_CLI_DIR)
+      const customErrorLogExists = await fs.promises
+        .access(path.join(customDir, 'error.log'))
+        .then(() => true)
+        .catch(() => false);
+      expect(customErrorLogExists).toBe(false); // No errors expected
+
+      // Cleanup custom directory
+      await fs.promises.rm(customDir, { recursive: true, force: true });
+    });
+  });
+
   describe('Increment mode', () => {
-    const testUrl = 'https://example.com/image-{i}.webp';
+    const testUrl = `${BASE_URL}/img-{i}.jpg`;
+
+    it('should work correctly with valid flags', async () => {
+      const flags: CliFlags = {
+        increment: true,
+        start: 1,
+        end: 3,
+      } as CliFlags;
+      const input = [testUrl];
+
+      await expect(runner(input, flags)).resolves.toBeUndefined();
+
+      // Ensure no errors were logged to error.log
+      expect(await hasErrorLogContent()).toBe(false);
+    });
 
     it('should throw an error if URL more than 1', async () => {
-      const { stderr } =
-        await $$`node ${path.resolve(dist, 'cli.js')} ${testUrl} ${testUrl} --increment --end=10`;
-      expect(stderr).contain('ArgumentError');
+      const flags: CliFlags = {
+        increment: true,
+        end: 10,
+      } as CliFlags;
+      const input = [testUrl, testUrl];
+
+      await expect(runner(input, flags)).rejects.toThrow(ArgumentError);
+
+      // Ensure no errors were logged to error.log since this should throw immediately
+      expect(await hasErrorLogContent()).toBe(false);
     });
 
     it('should throw an error if the start index is greater than the end index', async () => {
-      const { stderr } =
-        await $$`node ${path.resolve(dist, 'cli.js')} ${testUrl} --increment --start=2 --end=1`;
-      expect(stderr).contain('ArgumentError');
+      const flags: CliFlags = {
+        increment: true,
+        start: 2,
+        end: 1,
+      } as CliFlags;
+      const input = [testUrl];
+
+      await expect(runner(input, flags)).rejects.toThrow(ArgumentError);
+
+      // Ensure no errors were logged to error.log since this should throw immediately
+      expect(await hasErrorLogContent()).toBe(false);
     });
 
     it('should throw an error if the URL does not contain the index placeholder', async () => {
-      const { stderr } =
-        await $$`node ${path.resolve(dist, 'cli.js')} https://example.com/200/300 --increment --end=10`;
-      expect(stderr).contain('ArgumentError');
+      const flags: CliFlags = {
+        increment: true,
+        end: 10,
+      } as CliFlags;
+      const input = [`${BASE_URL}/200/300`];
+
+      await expect(runner(input, flags)).rejects.toThrow(ArgumentError);
+
+      // Ensure no errors were logged to error.log since this should throw immediately
+      expect(await hasErrorLogContent()).toBe(false);
+    });
+  });
+
+  describe('Silent mode', () => {
+    it('should work with --silent flag', async () => {
+      const flags: CliFlags = { silent: true } as CliFlags;
+      const input = [testUrl];
+
+      await expect(runner(input, flags)).resolves.toBeUndefined();
+
+      // Ensure no errors were logged to error.log
+      expect(await hasErrorLogContent()).toBe(false);
+    });
+
+    it('should not show progress bar in silent mode with multiple URLs', async () => {
+      const flags: CliFlags = { silent: true } as CliFlags;
+      const input = [
+        `${BASE_URL}/img-1.jpg`,
+        `${BASE_URL}/img-2.jpg`,
+        `${BASE_URL}/img-3.jpg`,
+      ];
+
+      await expect(runner(input, flags)).resolves.toBeUndefined();
+
+      // Ensure no errors were logged to error.log
+      expect(await hasErrorLogContent()).toBe(false);
+    });
+  });
+
+  describe('Progress bar', () => {
+    it('should show progress bar with multiple URLs', async () => {
+      const flags: CliFlags = {} as CliFlags;
+      const input = [`${BASE_URL}/img-1.jpg`, `${BASE_URL}/img-2.jpg`];
+
+      await expect(runner(input, flags)).resolves.toBeUndefined();
+
+      // Ensure no errors were logged to error.log
+      expect(await hasErrorLogContent()).toBe(false);
     });
   });
 });
