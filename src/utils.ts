@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import type { ImageOptions } from 'dist/index.js';
 import ArgumentError from './errors/ArgumentError.js';
+import type { ImageOptions } from './index.js';
 
 type IncrementFlags = {
   increment?: boolean;
@@ -86,7 +86,10 @@ export function parseCsvLine(line: string): string[] {
   }
 
   result.push(current.trim());
-  return result.map((v) => v.replace(/^"|"$/g, ''));
+
+  return result.map((v) =>
+    v.startsWith('"') && v.endsWith('"') && v.length >= 2 ? v.slice(1, -1) : v,
+  );
 }
 
 export function parseFileInput(
