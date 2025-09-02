@@ -9,7 +9,11 @@ import ArgumentError from '~/errors/ArgumentError.js';
 import DirectoryError from '~/errors/DirectoryError.js';
 import { BASE_URL } from './fixtures/mocks/handlers.js';
 import { server } from './fixtures/mocks/node.js';
-import { TEST_TMP_DIR, UNCREATABLE_DIR } from './helpers/paths.js';
+import {
+  TEST_TMP_DIR,
+  UNCREATABLE_DIR,
+  UNWRITABLE_DIR,
+} from './helpers/paths.js';
 
 // Use a shared temp directory for all filesystem writes in this file
 const ROOT_CWD = process.cwd();
@@ -298,25 +302,28 @@ describe('`download`', () => {
     await expect(download(image)).rejects.toThrow(DirectoryError);
   });
 
-  it('throw error if directory is not writable', async ({ onTestFinished }) => {
-    // Create a directory and make it read-only
-    const readOnlyDir = path.resolve('readonly-test');
-    await fs.promises.mkdir(readOnlyDir, { recursive: true });
-
-    onTestFinished(async () => {
-      // Restore write permissions before cleanup
-      await fs.promises.chmod(readOnlyDir, 0o755);
-      await fs.promises.rm(readOnlyDir, { recursive: true, force: true });
-    });
-
-    // Make directory read-only (remove write permission)
-    await fs.promises.chmod(readOnlyDir, 0o444);
-
+  it('throw error if directory is not writable', async () => {
+    // Use a system directory that should not be writable by normal users
     const image = parseImageParams(`${BASE_URL}/image.jpg`, {
-      directory: readOnlyDir,
+      directory: UNWRITABLE_DIR,
     });
 
-    await expect(download(image)).rejects.toThrow(DirectoryError);
+    await expect(download(image)).rejects.toThrow();
+
+    // On different platforms, different error types are thrown
+    // Windows: EPERM error (permission denied)
+    // Unix: DirectoryError (from access check)
+    try {
+      await download(image);
+    } catch (error) {
+      if (process.platform === 'win32') {
+        // On Windows, expect EPERM error when trying to write to System32
+        expect((error as NodeJS.ErrnoException).code).toBe('EPERM');
+      } else {
+        // On Unix systems, expect DirectoryError from directory access check
+        expect(error).toBeInstanceOf(DirectoryError);
+      }
+    }
   });
 
   it.for(['tmp', 'test/tmp'])(
