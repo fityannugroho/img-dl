@@ -298,6 +298,27 @@ describe('`download`', () => {
     await expect(download(image)).rejects.toThrow(DirectoryError);
   });
 
+  it('throw error if directory is not writable', async ({ onTestFinished }) => {
+    // Create a directory and make it read-only
+    const readOnlyDir = path.resolve('readonly-test');
+    await fs.promises.mkdir(readOnlyDir, { recursive: true });
+
+    onTestFinished(async () => {
+      // Restore write permissions before cleanup
+      await fs.promises.chmod(readOnlyDir, 0o755);
+      await fs.promises.rm(readOnlyDir, { recursive: true, force: true });
+    });
+
+    // Make directory read-only (remove write permission)
+    await fs.promises.chmod(readOnlyDir, 0o444);
+
+    const image = parseImageParams(`${BASE_URL}/image.jpg`, {
+      directory: readOnlyDir,
+    });
+
+    await expect(download(image)).rejects.toThrow(DirectoryError);
+  });
+
   it.for(['tmp', 'test/tmp'])(
     'create the directory if it does not exist: `%s`',
     async (directory, { onTestFinished }) => {
@@ -326,5 +347,41 @@ describe('`download`', () => {
     // `GET /unknown` will return a 404 Not Found response
     const image = parseImageParams(`${BASE_URL}/unknown`);
     await expect(download(image)).rejects.toThrow(RequestError);
+  });
+
+  it('should cleanup partial file when response is not image', async ({
+    onTestFinished,
+  }) => {
+    // This URL will return text/html instead of image/* content-type
+    // which should trigger the error cleanup path
+    const image = parseImageParams(`${BASE_URL}/`);
+
+    onTestFinished(async () => {
+      await fs.promises.rm(image.path, { force: true });
+    });
+
+    await expect(download(image)).rejects.toThrow(
+      'The response is not an image.',
+    );
+
+    // The file should not exist because it should be cleaned up on error
+    await expect(fs.promises.access(image.path)).rejects.toThrow();
+  });
+
+  it('should cleanup partial file when stream write fails', async ({
+    onTestFinished,
+  }) => {
+    // Create a file that already exists and is read-only to trigger write error
+    const image = parseImageParams(`${BASE_URL}/image.jpg`);
+
+    // Pre-create a read-only file to trigger write error
+    await fs.promises.writeFile(image.path, 'dummy', { mode: 0o444 });
+
+    onTestFinished(async () => {
+      await fs.promises.rm(image.path, { force: true });
+    });
+
+    // This should fail during file write and trigger onError cleanup
+    await expect(download(image)).rejects.toThrow();
   });
 });

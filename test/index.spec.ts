@@ -458,4 +458,108 @@ describe('`imgdl`', () => {
     expect(onSuccess).toHaveBeenCalledTimes(urls.length);
     expect(onError).toHaveBeenCalledTimes(0);
   });
+
+  it('should handle duplicate filenames with unique suffix', async ({
+    onTestFinished,
+  }) => {
+    const images: Image[] = [];
+    const onSuccess = vi.fn().mockImplementation((image) => images.push(image));
+    const onError = vi.fn();
+
+    // Use same URL and same name multiple times to test unique filename generation
+    const urls = [
+      { url: `${BASE_URL}/image.jpg`, name: 'myimage' },
+      { url: `${BASE_URL}/image.jpg`, name: 'myimage' },
+      { url: `${BASE_URL}/image.jpg`, name: 'myimage' },
+    ];
+
+    onTestFinished(async () => {
+      for (const img of images) {
+        await fs.rm(img.path, { force: true });
+      }
+    });
+
+    await expect(imgdl(urls, { onSuccess, onError })).resolves.toBeUndefined();
+    expect(onSuccess).toHaveBeenCalledTimes(urls.length);
+    expect(onError).toHaveBeenCalledTimes(0);
+
+    // Sort by name to ensure predictable order
+    images.sort((a, b) => a.name.localeCompare(b.name));
+
+    // Should have unique filenames: myimage.jpg, myimage (1).jpg, myimage (2).jpg
+    expect(images[0].name).toBe('myimage');
+    expect(images[1].name).toBe('myimage (1)');
+    expect(images[2].name).toBe('myimage (2)');
+
+    // All files should exist
+    for (const img of images) {
+      await expect(fs.access(img.path)).resolves.toBeUndefined();
+    }
+  });
+
+  it('should handle first occurrence without suffix and subsequent with suffix', async ({
+    onTestFinished,
+  }) => {
+    const images: Image[] = [];
+    const onSuccess = vi.fn().mockImplementation((image) => images.push(image));
+    const onError = vi.fn();
+
+    // Test the first file (count=0) doesn't get suffix, second file (count=1) gets suffix
+    const urls = [`${BASE_URL}/image.jpg`, `${BASE_URL}/image.jpg`];
+
+    onTestFinished(async () => {
+      for (const img of images) {
+        await fs.rm(img.path, { force: true });
+      }
+    });
+
+    await expect(imgdl(urls, { onSuccess, onError })).resolves.toBeUndefined();
+    expect(onSuccess).toHaveBeenCalledTimes(urls.length);
+    expect(onError).toHaveBeenCalledTimes(0);
+
+    // Sort by name to ensure predictable order
+    images.sort((a, b) => a.name.localeCompare(b.name));
+
+    // First occurrence should have no suffix (count was 0, so if (count) is false)
+    expect(images[0].name).toBe('image');
+    // Second occurrence should have suffix (count was 1, so if (count) is true)
+    expect(images[1].name).toBe('image (1)');
+
+    // All files should exist
+    for (const img of images) {
+      await expect(fs.access(img.path)).resolves.toBeUndefined();
+    }
+  });
+
+  it('should handle multiple duplicate filenames correctly', async ({
+    onTestFinished,
+  }) => {
+    const images: Image[] = [];
+    const onSuccess = vi.fn().mockImplementation((image) => images.push(image));
+    const onError = vi.fn();
+
+    // Test with three identical URLs to make sure the counter increments properly
+    const urls = [
+      `${BASE_URL}/image.jpg`,
+      `${BASE_URL}/image.jpg`,
+      `${BASE_URL}/image.jpg`,
+    ];
+
+    onTestFinished(async () => {
+      for (const img of images) {
+        await fs.rm(img.path, { force: true });
+      }
+    });
+
+    await expect(imgdl(urls, { onSuccess, onError })).resolves.toBeUndefined();
+    expect(onSuccess).toHaveBeenCalledTimes(urls.length);
+    expect(onError).toHaveBeenCalledTimes(0);
+
+    // Sort by name to ensure predictable order
+    images.sort((a, b) => a.name.localeCompare(b.name));
+
+    expect(images[0].name).toBe('image');
+    expect(images[1].name).toBe('image (1)');
+    expect(images[2].name).toBe('image (2)');
+  });
 });

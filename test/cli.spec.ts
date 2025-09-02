@@ -255,4 +255,42 @@ describe('cli', () => {
       expect(await hasErrorLogContent()).toBe(false);
     });
   });
+
+  describe('Silent mode', () => {
+    it('should work with --silent flag', async () => {
+      const flags: CliFlags = { silent: true } as CliFlags;
+      const input = [testUrl];
+
+      await expect(runner(input, flags)).resolves.toBeUndefined();
+
+      // Ensure no errors were logged to error.log
+      expect(await hasErrorLogContent()).toBe(false);
+    });
+
+    it('should not show progress bar in silent mode with multiple URLs', async () => {
+      const flags: CliFlags = { silent: true } as CliFlags;
+      const input = [
+        `${BASE_URL}/img-1.jpg`,
+        `${BASE_URL}/img-2.jpg`,
+        `${BASE_URL}/img-3.jpg`,
+      ];
+
+      await expect(runner(input, flags)).resolves.toBeUndefined();
+
+      // Ensure no errors were logged to error.log
+      expect(await hasErrorLogContent()).toBe(false);
+    });
+  });
+
+  describe('Progress bar', () => {
+    it('should show progress bar with multiple URLs', async () => {
+      const flags: CliFlags = {} as CliFlags;
+      const input = [`${BASE_URL}/img-1.jpg`, `${BASE_URL}/img-2.jpg`];
+
+      await expect(runner(input, flags)).resolves.toBeUndefined();
+
+      // Ensure no errors were logged to error.log
+      expect(await hasErrorLogContent()).toBe(false);
+    });
+  });
 });
