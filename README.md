@@ -68,11 +68,13 @@ Download image(s), by command or programmatically
 
 USAGE
   $ imgdl <url> ... [OPTIONS]
+  $ imgdl <path> [OPTIONS]
 
 PARAMETERS
   url   The URL of the image to download. Provide multiple URLs to download multiple images.
         In increment mode, the URL must contain {i} placeholder for the index,
         only one URL is allowed, and the '--end' is required.
+  path  The path to a local file that contains a list of image URLs.
 
 OPTIONS
   -d, --dir=<path>          The output directory. Default: current working directory
@@ -97,9 +99,9 @@ EXAMPLES
   $ imgdl https://example.com/image.jpg https://example.com/image2.webp
   $ imgdl https://example.com/image-{i}.jpg --increment --start=1 --end=10
   $ imgdl https://example.com/image.jpg --header="User-Agent: Mozilla/5.0" --header="Cookie: foo=bar"
-  $ imgdl /path/to/list.json
-  $ imgdl /path/to/list.csv
   $ imgdl /path/to/list.txt
+  $ imgdl /path/to/list.csv
+  $ imgdl /path/to/list.json
 ```
 
 #### Simple download
@@ -120,48 +122,60 @@ imgdl https://example.com/image.jpg https://example.com/image2.jpg
 imgdl https://example.com/image-{i}.jpg --increment --start=1 --end=10
 ```
 
-#### Download from file (JSON/CSV/TXT)
-
-- JSON array of URLs:
-
-```json
-[
-  "https://example.com/me/avatar.jpg",
-  "https://example.com/janedoe/avatar.jpg"
-]
-```
-
-- JSON array of objects with per-item options:
-
-```json
-[
-  { "url": "https://example.com/me/avatar.jpg", "directory": "myimages", "name": "myavatar", "extension": "png" },
-  { "url": "https://example.com/janedoe/avatar.jpg", "directory": "friends", "name": "janedoe" }
-]
-```
-
-- CSV with header (url,directory,name,extension):
-
-```csv
-url,directory,name,extension
-"https://example.com/me/avatar.jpg","myimages","myavatar","png"
-"https://example.com/janedoe/avatar.jpg","friends","janedoe",""
-```
+#### Download from file (TXT/CSV/JSON)
 
 - TXT (one URL per line):
 
-```text
-https://example.com/me/avatar.jpg
-https://example.com/janedoe/avatar.jpg
-```
+  ```text
+  https://example.com/me/avatar.jpg
+  https://example.com/janedoe/avatar.jpg
+  ```
+
+- CSV without header:
+
+  ```csv
+  "https://example.com/me/avatar.jpg","myimages","myavatar","png"
+  "https://example.com/janedoe/avatar.jpg","friends","janedoe",""
+  ```
+
+- CSV with header (url,directory,name,extension):
+
+  ```csv
+  url,directory,name,extension
+  "https://example.com/me/avatar.jpg",myimages,myavatar,png
+  "https://example.com/janedoe/avatar.jpg",friends,janedoe,jpg
+  "https://example.com/janedoe/avatar.jpg",,,webp
+  ```
+
+  > You don't need to include all columns, only the `url` column is required. The other columns are optional. Quotes are optional.
+
+- JSON array of URLs:
+
+  ```json
+  [
+    "https://example.com/me/avatar.jpg",
+    "https://example.com/janedoe/avatar.jpg"
+  ]
+  ```
+
+- JSON array of objects with per-item options:
+
+  ```json
+  [
+    { "url": "https://example.com/me/avatar.jpg", "directory": "myimages", "name": "myavatar", "extension": "png" },
+    { "url": "https://example.com/janedoe/avatar.jpg", "directory": "friends", "name": "janedoe" }
+  ]
+  ```
 
 Command examples:
 
 ```bash
+imgdl /path/to/list.txt --name=avatar
+imgdl /path/to/list.csv --dir=images --ext=png
 imgdl /path/to/list.json
-imgdl /path/to/list.csv
-imgdl /path/to/list.txt
 ```
+
+> **Note:** Any options specified in the input files will take precedence over the options specified in the command line.
 
 ### Programmatically
 

@@ -13,15 +13,14 @@ import { generateDownloadUrls, isFilePath, parseFileInput } from './utils.js';
 const cli = meow(
   `
   USAGE
-    $ imgdl <url/path> ... [OPTIONS]
+    $ imgdl <url> ... [OPTIONS]
+    $ imgdl <path> [OPTIONS]
 
   PARAMETERS
-    url/path  The URL of the image to download or the path to a local file that
-              contains a list of images to download.
-              Provide multiple URLs to download multiple images.
-              In increment mode, the URL must contain {i} placeholder for the index,
-              only one URL is allowed, and the 'end' flag is required.
-              If path is provided, it must be a valid txt, csv, or json file.
+    url   The URL of the image to download. Provide multiple URLs to download multiple images.
+          In increment mode, the URL must contain {i} placeholder for the index,
+          only one URL is allowed, and the '--end' flag is required.
+    path  The path to a local file that contains a list of image URLs.
 
   OPTIONS
     -d, --dir=<path>          The output directory. Default: current working directory
