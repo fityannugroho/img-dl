@@ -22,27 +22,13 @@ describe('`imgdl`', () => {
   /**
    * The directory to save the downloaded images.
    */
-  const directory = 'test/tmp';
-  const ROOT_CWD = process.cwd();
+  const directory = TEST_TMP_DIR;
 
-  beforeAll(async () => {
-    // Use a unique temp directory for this test file
-    const cwd = path.resolve(TEST_TMP_DIR, 'index');
-    await fs.mkdir(cwd, { recursive: true });
-    process.chdir(cwd);
-    server.listen();
-  });
+  beforeAll(() => server.listen());
 
   afterEach(() => server.resetHandlers());
 
-  afterAll(async () => {
-    server.close();
-
-    // Remove the `tmp` directory
-    await fs.rm(directory, { force: true, recursive: true });
-    // Restore original working directory
-    process.chdir(ROOT_CWD);
-  });
+  afterAll(() => server.close());
 
   it('should download an image if single URL is provided', async ({
     onTestFinished,
@@ -345,6 +331,11 @@ describe('`imgdl`', () => {
     expect(images).toStrictEqual([
       {
         ...defaultExpected,
+        directory: path.resolve(directory),
+        path: path.resolve(directory, 'image.jpg'),
+      },
+      {
+        ...defaultExpected,
         extension: 'png',
         path: path.resolve('image.png'),
       },
@@ -352,11 +343,6 @@ describe('`imgdl`', () => {
         ...defaultExpected,
         name: 'myimage',
         path: path.resolve('myimage.jpg'),
-      },
-      {
-        ...defaultExpected,
-        directory: path.resolve(directory),
-        path: path.resolve(directory, 'image.jpg'),
       },
       {
         ...defaultExpected,
@@ -413,6 +399,11 @@ describe('`imgdl`', () => {
     expect(images).toStrictEqual([
       {
         ...defaultExpected,
+        directory: path.resolve(directory),
+        path: path.resolve(directory, 'avatar.png'),
+      },
+      {
+        ...defaultExpected,
         extension: 'webp',
         path: path.resolve('avatar.webp'),
       },
@@ -421,11 +412,6 @@ describe('`imgdl`', () => {
         name: 'myavatar',
         extension: 'png',
         path: path.resolve('myavatar.png'),
-      },
-      {
-        ...defaultExpected,
-        directory: path.resolve(directory),
-        path: path.resolve(directory, 'avatar.png'),
       },
     ]);
 

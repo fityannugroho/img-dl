@@ -23,17 +23,6 @@ import {
   UNWRITABLE_DIR,
 } from './helpers/paths.js'; // Use a shared temp directory for all filesystem writes in this file
 
-const ROOT_CWD = process.cwd();
-beforeAll(async () => {
-  const cwd = path.resolve(TEST_TMP_DIR, 'downloader');
-  await fs.promises.mkdir(cwd, { recursive: true });
-  process.chdir(cwd);
-  server.listen();
-});
-afterAll(async () => {
-  process.chdir(ROOT_CWD);
-});
-
 describe('parseImageParams', () => {
   describe('url', () => {
     it('set values from URL if no options provided', () => {
@@ -346,12 +335,10 @@ describe('`download`', () => {
     onTestFinished,
   }) => {
     // Create a directory and then make it inaccessible by removing all permissions
-    const testDir = path.resolve('test-access-dir');
+    const testDir = path.resolve(TEST_TMP_DIR, 'test-access-dir');
     await fs.promises.mkdir(testDir, { recursive: true });
 
     onTestFinished(async () => {
-      // Restore permissions before cleanup
-      await fs.promises.chmod(testDir, 0o755);
       await fs.promises.rm(testDir, { recursive: true, force: true });
     });
 
