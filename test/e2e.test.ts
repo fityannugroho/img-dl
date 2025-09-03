@@ -1,13 +1,11 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import got from 'got';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import imgdl from '~/index.js';
-import { TEST_TMP_DIR } from './helpers/paths.js';
 
 describe('e2e', async () => {
   const testUrl = 'https://picsum.photos/200/300.jpg';
-  const ROOT_CWD = process.cwd();
 
   // Check connectivity to the cloud image server
   let connected = false;
@@ -20,15 +18,6 @@ describe('e2e', async () => {
   } catch {
     connected = false;
   }
-
-  beforeAll(async () => {
-    // Ensure all outputs go under shared tmp
-    process.chdir(TEST_TMP_DIR);
-  });
-
-  afterAll(async () => {
-    process.chdir(ROOT_CWD);
-  });
 
   it.skipIf(!connected)(
     'downloads a single image with defaults',

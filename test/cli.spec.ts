@@ -1,14 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import {
-  afterAll,
-  afterEach,
-  beforeAll,
-  describe,
-  expect,
-  it,
-  vi,
-} from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { runner } from '~/cli.js';
 import ArgumentError from '~/errors/ArgumentError.js';
 import { BASE_URL } from './fixtures/mocks/handlers.js';
@@ -17,42 +9,18 @@ import { TEST_TMP_DIR } from './helpers/paths.js';
 
 type CliFlags = Parameters<typeof runner>[1];
 
-// Use a shared temp directory for all filesystem writes in this file
-const TEST_CLI_DIR = path.resolve(TEST_TMP_DIR, 'cli');
+beforeAll(() => server.listen());
 
-// Mock process.cwd() to return our test directory
-const originalCwd = process.cwd;
+afterEach(() => server.resetHandlers());
 
-beforeAll(async () => {
-  await fs.promises.mkdir(TEST_CLI_DIR, { recursive: true });
-  // Mock process.cwd to return our test directory
-  process.cwd = vi.fn(() => TEST_CLI_DIR);
-  server.listen();
-});
-
-afterEach(async () => {
-  // Clean up the entire test directory and recreate it
-  await fs.promises.rm(TEST_CLI_DIR, { recursive: true, force: true });
-  await fs.promises.mkdir(TEST_CLI_DIR, { recursive: true });
-
-  server.resetHandlers();
-});
-
-afterAll(async () => {
-  // Restore original process.cwd
-  process.cwd = originalCwd;
-  server.close();
-
-  // Final cleanup - remove the entire test directory
-  await fs.promises.rm(TEST_CLI_DIR, { recursive: true, force: true });
-});
+afterAll(() => server.close());
 
 /**
  * Helper function to check if error.log exists and has content
  */
 async function hasErrorLogContent(): Promise<boolean> {
   try {
-    const stats = await fs.promises.stat(path.join(TEST_CLI_DIR, 'error.log'));
+    const stats = await fs.promises.stat(path.join(TEST_TMP_DIR, 'error.log'));
     return stats.size > 0;
   } catch {
     return false;
@@ -119,7 +87,8 @@ describe('cli', () => {
 
   describe('Directory options', () => {
     it('should work with explicit directory option', async () => {
-      const customDir = path.join(TEST_CLI_DIR, 'custom');
+      const customDir = 'custom';
+      const customDirPath = path.join(TEST_TMP_DIR, customDir);
       await fs.promises.mkdir(customDir, { recursive: true });
 
       const flags: CliFlags = { dir: customDir } as CliFlags;
@@ -128,19 +97,19 @@ describe('cli', () => {
       await expect(runner(input, flags)).resolves.toBeUndefined();
 
       // Check that files were downloaded to the custom directory
-      const files = await fs.promises.readdir(customDir);
+      const files = await fs.promises.readdir(customDirPath);
       const jpgFiles = files.filter((f) => f.toLowerCase().endsWith('.jpg'));
       expect(jpgFiles.length).toBe(1);
 
       // Check that error.log would be in the custom directory (not in TEST_CLI_DIR)
       const customErrorLogExists = await fs.promises
-        .access(path.join(customDir, 'error.log'))
+        .access(path.join(customDirPath, 'error.log'))
         .then(() => true)
         .catch(() => false);
       expect(customErrorLogExists).toBe(false); // No errors expected
 
       // Cleanup custom directory
-      await fs.promises.rm(customDir, { recursive: true, force: true });
+      await fs.promises.rm(customDirPath, { recursive: true, force: true });
     });
   });
 
@@ -242,7 +211,7 @@ describe('cli', () => {
 
   describe('File input', () => {
     it('supports JSON array of URLs', async () => {
-      const filePath = path.join(TEST_CLI_DIR, 'urls.json');
+      const filePath = path.join(TEST_TMP_DIR, 'urls.json');
       const data = [`${BASE_URL}/image.jpg`, `${BASE_URL}/img-1.jpg`];
       await fs.promises.writeFile(filePath, JSON.stringify(data), 'utf8');
 
@@ -252,15 +221,15 @@ describe('cli', () => {
       await expect(runner(input, flags)).resolves.toBeUndefined();
 
       // Ensure images were downloaded
-      const files = await fs.promises.readdir(TEST_CLI_DIR);
+      const files = await fs.promises.readdir(TEST_TMP_DIR);
       const jpgFiles = files.filter((f) => f.toLowerCase().endsWith('.jpg'));
       expect(jpgFiles.length).toBe(2);
       expect(await hasErrorLogContent()).toBe(false);
     });
 
     it('supports JSON array of objects with options', async () => {
-      const filePath = path.join(TEST_CLI_DIR, 'list.json');
-      const customDir = path.join(TEST_CLI_DIR, 'avatars');
+      const filePath = path.join(TEST_TMP_DIR, 'list.json');
+      const customDir = path.join(TEST_TMP_DIR, 'avatars');
       const data = [
         {
           url: `${BASE_URL}/image.jpg`,
@@ -289,8 +258,8 @@ describe('cli', () => {
     });
 
     it('supports CSV with header', async () => {
-      const filePath = path.join(TEST_CLI_DIR, 'list.csv');
-      const customDir = path.join(TEST_CLI_DIR, 'friends');
+      const filePath = path.join(TEST_TMP_DIR, 'list.csv');
+      const customDir = path.join(TEST_TMP_DIR, 'friends');
       const csv = [
         'url,directory,name,extension',
         `"${BASE_URL}/image.jpg","friends","john","png"`,
@@ -310,7 +279,7 @@ describe('cli', () => {
     });
 
     it('supports TXT with URLs per line', async () => {
-      const filePath = path.join(TEST_CLI_DIR, 'urls.txt');
+      const filePath = path.join(TEST_TMP_DIR, 'urls.txt');
       const txt = [`${BASE_URL}/image.jpg`, `${BASE_URL}/img-1.jpg`].join('\n');
       await fs.promises.writeFile(filePath, txt, 'utf8');
 
@@ -319,7 +288,7 @@ describe('cli', () => {
 
       await expect(runner(input, flags)).resolves.toBeUndefined();
 
-      const files = await fs.promises.readdir(TEST_CLI_DIR);
+      const files = await fs.promises.readdir(TEST_TMP_DIR);
       const jpgFiles = files.filter((f) => f.toLowerCase().endsWith('.jpg'));
       expect(jpgFiles.length).toBe(2);
       expect(await hasErrorLogContent()).toBe(false);
