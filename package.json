@@ -40,25 +40,25 @@
     "node": ">=20.9"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.2.2",
+    "@biomejs/biome": "2.3.0",
     "@types/cli-progress": "^3.11.6",
-    "@types/node": "^24.3.0",
+    "@types/node": "^24.9.1",
     "@vitest/coverage-v8": "^3.2.4",
     "execa": "^9.6.0",
     "file-type": "^21.0.0",
-    "msw": "^2.10.5",
+    "msw": "^2.11.6",
     "tsup": "^8.5.0",
-    "typescript": "^5.9.2",
+    "typescript": "^5.9.3",
     "vitest": "^3.2.4"
   },
   "dependencies": {
-    "chalk": "^5.6.0",
+    "chalk": "^5.6.2",
     "cli-progress": "^3.12.0",
-    "got": "^14.4.7",
-    "meow": "^13.2.0",
+    "got": "^14.6.0",
+    "meow": "^14.0.0",
     "p-queue": "^8.1.0",
     "sanitize-filename": "^1.6.3",
-    "sharp": "^0.34.3"
+    "sharp": "^0.34.4"
   },
   "pnpm": {
     "supportedArchitectures": {
