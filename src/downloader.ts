@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { pipeline } from 'node:stream/promises';
+import tls from 'node:tls';
 import got, { type PlainResponse } from 'got';
 import sanitize from 'sanitize-filename';
 import sharp, { type FormatEnum } from 'sharp';
@@ -67,6 +68,12 @@ export type DownloadOptions = {
    * @default true
    */
   rejectUnauthorized?: boolean;
+  /**
+   * The certificate authority to trust.
+   *
+   * This is useful when the server does not send intermediate certificates.
+   */
+  ca?: string | Buffer;
 };
 
 /**
@@ -200,6 +207,15 @@ export async function download(img: Image, options: DownloadOptions = {}) {
     signal: options.signal,
     https: {
       rejectUnauthorized: options.rejectUnauthorized,
+      certificateAuthority: options.ca
+        ? [
+            ...tls.rootCertificates,
+            options.ca,
+            ...(process.env.NODE_EXTRA_CA_CERTS
+              ? [fs.readFileSync(process.env.NODE_EXTRA_CA_CERTS)]
+              : []),
+          ]
+        : undefined,
     },
   });
 

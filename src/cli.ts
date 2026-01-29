@@ -30,6 +30,7 @@ const cli = meow(
     -H, --header=<header>     The header to send with the request. Can be used multiple times
     -i, --increment           Enable increment mode. Default: false
         --insecure            Disable certificate verification. Default: false
+        --ca-file=<path>      The certificate authority file to trust.
         --interval=<number>   The interval between each batch of requests in milliseconds
     -n, --name=<filename>     The filename. Default: original filename or timestamp
         --max-retry=<number>  Set the maximum number of times to retry the request if it fails
@@ -73,6 +74,9 @@ const cli = meow(
       },
       insecure: {
         type: 'boolean',
+      },
+      caFile: {
+        type: 'string',
       },
       interval: {
         type: 'number',
@@ -175,6 +179,18 @@ export async function runner(
 
   const abortController = new AbortController();
 
+  // Load CA file if provided
+  let ca: string | Buffer | undefined;
+  if (flags.caFile) {
+    try {
+      ca = fs.readFileSync(path.resolve(flags.caFile));
+    } catch (error) {
+      throw new ArgumentError(
+        `Failed to read CA file: ${(error as Error).message}`,
+      );
+    }
+  }
+
   const onSigint = () => {
     bar.stop();
     console.log(dimLog('\nAborting...'));
@@ -218,6 +234,7 @@ export async function runner(
         timeout: flags.timeout,
         signal: abortController.signal,
         rejectUnauthorized: flags.insecure ? false : undefined,
+        ca,
       }).then(resolve, rejects);
     });
   } finally {
