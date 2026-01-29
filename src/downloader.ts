@@ -207,15 +207,22 @@ export async function download(img: Image, options: DownloadOptions = {}) {
     signal: options.signal,
     https: {
       rejectUnauthorized: options.rejectUnauthorized,
-      certificateAuthority: options.ca
-        ? [
-            ...tls.rootCertificates,
-            options.ca,
-            ...(process.env.NODE_EXTRA_CA_CERTS
-              ? [fs.readFileSync(process.env.NODE_EXTRA_CA_CERTS)]
-              : []),
-          ]
-        : undefined,
+      certificateAuthority: (() => {
+        if (!options.ca) return undefined;
+
+        const ca = [...tls.rootCertificates, options.ca];
+        const extraCaPath = process.env.NODE_EXTRA_CA_CERTS;
+
+        if (extraCaPath && fs.existsSync(extraCaPath)) {
+          try {
+            ca.push(fs.readFileSync(extraCaPath));
+          } catch {
+            // Ignore unreadable extra CA file; keep system roots + user-provided CA.
+          }
+        }
+
+        return ca;
+      })(),
     },
   });
 
