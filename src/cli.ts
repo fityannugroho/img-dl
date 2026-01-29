@@ -29,6 +29,7 @@ const cli = meow(
     -h, --help                Show this help message
     -H, --header=<header>     The header to send with the request. Can be used multiple times
     -i, --increment           Enable increment mode. Default: false
+        --insecure            Disable certificate verification. Default: false
         --interval=<number>   The interval between each batch of requests in milliseconds
     -n, --name=<filename>     The filename. Default: original filename or timestamp
         --max-retry=<number>  Set the maximum number of times to retry the request if it fails
@@ -68,6 +69,9 @@ const cli = meow(
       },
       increment: {
         shortFlag: 'i',
+        type: 'boolean',
+      },
+      insecure: {
         type: 'boolean',
       },
       interval: {
@@ -213,6 +217,7 @@ export async function runner(
         step: flags.step,
         timeout: flags.timeout,
         signal: abortController.signal,
+        rejectUnauthorized: flags.insecure ? false : undefined,
       }).then(resolve, rejects);
     });
   } finally {

@@ -59,6 +59,14 @@ export type DownloadOptions = {
    * The signal which can be used to abort requests.
    */
   signal?: AbortSignal;
+  /**
+   * Set to `false` to disable certificate verification.
+   *
+   * This is useful when the server does not send intermediate certificates or self-signed.
+   *
+   * @default true
+   */
+  rejectUnauthorized?: boolean;
 };
 
 /**
@@ -190,6 +198,9 @@ export async function download(img: Image, options: DownloadOptions = {}) {
     retry: { limit: options.maxRetry },
     headers: options.headers,
     signal: options.signal,
+    https: {
+      rejectUnauthorized: options.rejectUnauthorized,
+    },
   });
 
   let writeStream: fs.WriteStream | undefined;
