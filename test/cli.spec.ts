@@ -54,18 +54,15 @@ describe('cli', () => {
     'Empty-Value-Header:',
     'Empty-Value-Header: ',
     ': value',
-  ])(
-    'should throw an error if the header is not valid: `%s`',
-    async (header) => {
-      const flags: CliFlags = { header: [header] } as CliFlags;
-      const input = [testUrl];
+  ])('should throw an error if the header is not valid: `%s`', async (header) => {
+    const flags: CliFlags = { header: [header] } as CliFlags;
+    const input = [testUrl];
 
-      await expect(runner(input, flags)).rejects.toThrow(ArgumentError);
+    await expect(runner(input, flags)).rejects.toThrow(ArgumentError);
 
-      // Ensure no errors were logged to error.log since this should throw immediately
-      expect(await hasErrorLogContent()).toBe(false);
-    },
-  );
+    // Ensure no errors were logged to error.log since this should throw immediately
+    expect(await hasErrorLogContent()).toBe(false);
+  });
 
   describe('Error handling and logging', () => {
     it('should log errors to error.log when download fails', async () => {
