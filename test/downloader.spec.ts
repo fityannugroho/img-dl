@@ -51,23 +51,24 @@ describe('parseImageParams', () => {
       });
     });
 
-    it.each(['not-url', 'some/path', 'example.com/image.jpg'])(
-      'throw error if not URL: `%s`',
-      (url) => {
-        expect(() => parseImageParams(url)).toThrow(
-          new ArgumentError('Invalid URL'),
-        );
-      },
-    );
+    it.each([
+      'not-url',
+      'some/path',
+      'example.com/image.jpg',
+    ])('throw error if not URL: `%s`', (url) => {
+      expect(() => parseImageParams(url)).toThrow(
+        new ArgumentError('Invalid URL'),
+      );
+    });
 
-    it.each(['ftp://example.com', 'ws://example.com'])(
-      'throw error if protocol is not http(s): `%s`',
-      (url) => {
-        expect(() => parseImageParams(url)).toThrow(
-          new ArgumentError('URL protocol must be http or https'),
-        );
-      },
-    );
+    it.each([
+      'ftp://example.com',
+      'ws://example.com',
+    ])('throw error if protocol is not http(s): `%s`', (url) => {
+      expect(() => parseImageParams(url)).toThrow(
+        new ArgumentError('URL protocol must be http or https'),
+      );
+    });
 
     it.each([
       'https://example.com/file.pdf',
@@ -186,18 +187,23 @@ describe('parseImageParams', () => {
       expect(result.extension).toBe(DEFAULT_EXTENSION);
     });
 
-    it.each(['png', 'PNG', 'jpg', 'jpeg', 'webp', 'gif', 'svg'])(
-      'must be valid and supported, case-insensitive (lowercase): `%s`',
-      (extension) => {
-        const url = 'https://example.com/image.jpg';
-        const result = parseImageParams(url, { extension });
-        expect(result.originalExtension).toBe('jpg');
-        expect(result.extension).toBe(extension.toLowerCase());
-        expect(result.path).toBe(
-          path.resolve(`image.${extension.toLowerCase()}`),
-        );
-      },
-    );
+    it.each([
+      'png',
+      'PNG',
+      'jpg',
+      'jpeg',
+      'webp',
+      'gif',
+      'svg',
+    ])('must be valid and supported, case-insensitive (lowercase): `%s`', (extension) => {
+      const url = 'https://example.com/image.jpg';
+      const result = parseImageParams(url, { extension });
+      expect(result.originalExtension).toBe('jpg');
+      expect(result.extension).toBe(extension.toLowerCase());
+      expect(result.path).toBe(
+        path.resolve(`image.${extension.toLowerCase()}`),
+      );
+    });
 
     it('throw error if contains dot', () => {
       const url = 'https://example.com/image.jpg';
@@ -205,15 +211,21 @@ describe('parseImageParams', () => {
       expect(() => parseImageParams(url, options)).toThrow(ArgumentError);
     });
 
-    it.each(['txt', 'mp4', 'unknown', 'bla.bla', 'vnd', 'tga', 'exif', 'heic'])(
-      'throw error if invalid or unsupported image extensions: `%s`',
-      (extension) => {
-        const url = 'https://example.com/image.jpg';
-        expect(() => parseImageParams(url, { extension })).toThrow(
-          new ArgumentError('Unsupported image extension'),
-        );
-      },
-    );
+    it.each([
+      'txt',
+      'mp4',
+      'unknown',
+      'bla.bla',
+      'vnd',
+      'tga',
+      'exif',
+      'heic',
+    ])('throw error if invalid or unsupported image extensions: `%s`', (extension) => {
+      const url = 'https://example.com/image.jpg';
+      expect(() => parseImageParams(url, { extension })).toThrow(
+        new ArgumentError('Unsupported image extension'),
+      );
+    });
 
     it('generate suffix name if file path already exists', ({
       onTestFinished,
@@ -386,23 +398,25 @@ describe('`download`', () => {
     }
   });
 
-  it.for(['tmp', 'test/tmp'])(
-    'create the directory if it does not exist: `%s`',
-    async (directory, { onTestFinished }) => {
-      // Prepare: ensure the directory does not exist
+  it.for([
+    'tmp',
+    'test/tmp',
+  ])('create the directory if it does not exist: `%s`', async (directory, {
+    onTestFinished,
+  }) => {
+    // Prepare: ensure the directory does not exist
+    await fs.promises.rm(directory, { recursive: true, force: true });
+
+    onTestFinished(async () => {
       await fs.promises.rm(directory, { recursive: true, force: true });
+    });
 
-      onTestFinished(async () => {
-        await fs.promises.rm(directory, { recursive: true, force: true });
-      });
+    const image = parseImageParams(`${BASE_URL}/image.jpg`, { directory });
+    const { path: actualPath } = await download(image);
 
-      const image = parseImageParams(`${BASE_URL}/image.jpg`, { directory });
-      const { path: actualPath } = await download(image);
-
-      await expect(fs.promises.access(directory)).resolves.toBeUndefined();
-      await expect(fs.promises.access(actualPath)).resolves.toBeUndefined();
-    },
-  );
+    await expect(fs.promises.access(directory)).resolves.toBeUndefined();
+    await expect(fs.promises.access(actualPath)).resolves.toBeUndefined();
+  });
 
   it('throw error if the response is not image', async () => {
     // `GET /` will return a 200 OK response with `OK` body

@@ -1,5 +1,5 @@
 import fs from 'node:fs/promises';
-import { afterEach, beforeEach } from 'vitest';
+import { afterEach, beforeEach, vi } from 'vitest';
 import { TEST_TMP_DIR } from './helpers/paths.js';
 
 let rootCwd: string;
@@ -11,6 +11,7 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
+  vi.restoreAllMocks();
   process.chdir(rootCwd);
   await fs.rm(TEST_TMP_DIR, { recursive: true, force: true });
 });
