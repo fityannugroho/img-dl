@@ -218,7 +218,7 @@ export async function download(img: Image, options: DownloadOptions = {}) {
             ca.push(fs.readFileSync(extraCaPath));
           } catch {
             console.warn(
-              `Warning: Unable to read NODE_EXTRA_CA_CERTS file at "${extraCaPath}". ` +
+              'Warning: Unable to read NODE_EXTRA_CA_CERTS file. ' +
                 'Continuing with system root CAs and any user-provided CA.',
             );
           }
