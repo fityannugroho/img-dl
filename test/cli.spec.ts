@@ -1,6 +1,14 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  describe,
+  expect,
+  it,
+  vi,
+} from 'vitest';
 import { runner } from '~/cli.js';
 import ArgumentError from '~/errors/ArgumentError.js';
 import { BASE_URL } from './fixtures/mocks/handlers.js';
@@ -203,6 +211,91 @@ describe('cli', () => {
       const input = [`${BASE_URL}/img-1.jpg`, `${BASE_URL}/img-2.jpg`];
 
       await expect(runner(input, flags)).resolves.toBeUndefined();
+
+      // Ensure no errors were logged to error.log
+      expect(await hasErrorLogContent()).toBe(false);
+    });
+  });
+
+  describe('SSL/TLS options', () => {
+    it('should throw ArgumentError when --ca-file file does not exist', async () => {
+      const flags: CliFlags = {
+        caFile: '/nonexistent/path/ca.pem',
+      } as CliFlags;
+      const input = [testUrl];
+
+      await expect(runner(input, flags)).rejects.toThrow(ArgumentError);
+      await expect(runner(input, flags)).rejects.toThrow(
+        'Failed to read CA file',
+      );
+
+      // Ensure no errors were logged to error.log since this should throw immediately
+      expect(await hasErrorLogContent()).toBe(false);
+    });
+
+    it('should work correctly when --ca-file file exists', async () => {
+      const caFilePath = path.join(TEST_TMP_DIR, 'test-ca.pem');
+      const caContent =
+        '-----BEGIN CERTIFICATE-----\ntest\n-----END CERTIFICATE-----';
+      await fs.promises.writeFile(caFilePath, caContent, 'utf8');
+
+      const flags: CliFlags = { caFile: caFilePath } as CliFlags;
+      const input = [testUrl];
+
+      await expect(runner(input, flags)).resolves.toBeUndefined();
+
+      // Ensure no errors were logged to error.log
+      expect(await hasErrorLogContent()).toBe(false);
+
+      // Cleanup
+      await fs.promises.rm(caFilePath, { force: true });
+    });
+
+    it('should show warning message when --insecure flag is used', async () => {
+      const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {
+        /* suppress console output during test */
+      });
+
+      const flags: CliFlags = { insecure: true } as CliFlags;
+      const input = [testUrl];
+
+      await expect(runner(input, flags)).resolves.toBeUndefined();
+
+      // Verify the warning message was logged
+      expect(consoleSpy).toHaveBeenCalledWith(
+        expect.stringContaining('SSL certificate verification is disabled'),
+      );
+      expect(consoleSpy).toHaveBeenCalledWith(
+        expect.stringContaining('--insecure'),
+      );
+
+      // Cleanup
+      consoleSpy.mockRestore();
+
+      // Ensure no errors were logged to error.log
+      expect(await hasErrorLogContent()).toBe(false);
+    });
+
+    it('should not show insecure warning in silent mode', async () => {
+      const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {
+        /* suppress console output during test */
+      });
+
+      const flags: CliFlags = { insecure: true, silent: true } as CliFlags;
+      const input = [testUrl];
+
+      await expect(runner(input, flags)).resolves.toBeUndefined();
+
+      // Verify no warning about insecure was logged
+      const insecureCalls = consoleSpy.mock.calls.filter(
+        (call) =>
+          typeof call[0] === 'string' &&
+          call[0].includes('SSL certificate verification is disabled'),
+      );
+      expect(insecureCalls.length).toBe(0);
+
+      // Cleanup
+      consoleSpy.mockRestore();
 
       // Ensure no errors were logged to error.log
       expect(await hasErrorLogContent()).toBe(false);

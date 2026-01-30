@@ -63,7 +63,7 @@ export type DownloadOptions = {
   /**
    * Set to `false` to disable certificate verification.
    *
-   * This is useful when the server does not send intermediate certificates or self-signed.
+   * This is useful when the server does not send intermediate certificates or uses self-signed certificates.
    *
    * @default true
    */
@@ -217,7 +217,10 @@ export async function download(img: Image, options: DownloadOptions = {}) {
           try {
             ca.push(fs.readFileSync(extraCaPath));
           } catch {
-            // Ignore unreadable extra CA file; keep system roots + user-provided CA.
+            console.warn(
+              `Warning: Unable to read NODE_EXTRA_CA_CERTS file at "${extraCaPath}". ` +
+                'Continuing with system root CAs and any user-provided CA.',
+            );
           }
         }
 
