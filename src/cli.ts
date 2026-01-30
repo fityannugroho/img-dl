@@ -145,17 +145,17 @@ export async function runner(
   }
 
   if (!flags.silent) {
-    console.log(
-      `\n${dimLog('Downloading...')}\n${warningLog('Press Ctrl+C to abort')}`,
-    );
-
     if (flags.insecure) {
       console.log(
         warningLog(
-          '\nWarning: SSL certificate verification is disabled (--insecure). This makes the connection vulnerable to man-in-the-middle attacks. Use with caution.\n',
+          '\nWarning: SSL certificate verification is disabled (--insecure). This makes the connection vulnerable to man-in-the-middle attacks. Use with caution.',
         ),
       );
     }
+
+    console.log(
+      `${dimLog('Downloading...')}\n${warningLog('Press Ctrl+C to abort')}`,
+    );
   }
 
   const separator = dimLog('|');
