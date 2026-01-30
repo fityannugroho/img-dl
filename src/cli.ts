@@ -241,7 +241,7 @@ export async function runner(
         step: flags.step,
         timeout: flags.timeout,
         signal: abortController.signal,
-        rejectUnauthorized: flags.insecure ? false : undefined,
+        ...(flags.insecure ? { rejectUnauthorized: false } : {}),
         ca,
       }).then(resolve, rejects);
     });
