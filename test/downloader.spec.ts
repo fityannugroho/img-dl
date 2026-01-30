@@ -451,4 +451,166 @@ describe('`download`', () => {
     // This should fail during file write and trigger onError cleanup
     await expect(download(image)).rejects.toThrow();
   });
+
+  describe('SSL/TLS options', () => {
+    it('should pass rejectUnauthorized option to disable certificate verification', async ({
+      onTestFinished,
+    }) => {
+      const image = parseImageParams(`${BASE_URL}/image.jpg`);
+
+      onTestFinished(async () => {
+        await fs.promises.rm(image.path, { force: true });
+      });
+
+      // Download with rejectUnauthorized set to false
+      await expect(
+        download(image, { rejectUnauthorized: false }),
+      ).resolves.toStrictEqual(image);
+      await expect(fs.promises.access(image.path)).resolves.toBeUndefined();
+    });
+
+    it('should use custom CA certificate when ca option is provided', async ({
+      onTestFinished,
+    }) => {
+      const image = parseImageParams(`${BASE_URL}/image.jpg`);
+      const customCa =
+        '-----BEGIN CERTIFICATE-----\ntest-ca\n-----END CERTIFICATE-----';
+
+      onTestFinished(async () => {
+        await fs.promises.rm(image.path, { force: true });
+      });
+
+      // Download with custom CA
+      await expect(download(image, { ca: customCa })).resolves.toStrictEqual(
+        image,
+      );
+      await expect(fs.promises.access(image.path)).resolves.toBeUndefined();
+    });
+
+    it('should use custom CA certificate from Buffer when ca option is provided as Buffer', async ({
+      onTestFinished,
+    }) => {
+      const image = parseImageParams(`${BASE_URL}/image.jpg`);
+      const customCaBuffer = Buffer.from(
+        '-----BEGIN CERTIFICATE-----\ntest-ca-buffer\n-----END CERTIFICATE-----',
+      );
+
+      onTestFinished(async () => {
+        await fs.promises.rm(image.path, { force: true });
+      });
+
+      // Download with custom CA as Buffer
+      await expect(
+        download(image, { ca: customCaBuffer }),
+      ).resolves.toStrictEqual(image);
+      await expect(fs.promises.access(image.path)).resolves.toBeUndefined();
+    });
+
+    it('should warn when NODE_EXTRA_CA_CERTS file cannot be read', async ({
+      onTestFinished,
+    }) => {
+      // Skip this test on Windows as permission handling differs
+      if (process.platform === 'win32') {
+        return;
+      }
+
+      const image = parseImageParams(`${BASE_URL}/image.jpg`);
+      const customCa =
+        '-----BEGIN CERTIFICATE-----\ntest-ca\n-----END CERTIFICATE-----';
+      const consoleWarnSpy = vi
+        .spyOn(console, 'warn')
+        .mockImplementation(() => {
+          /* suppress console output during test */
+        });
+
+      // Create a CA file that exists but is not readable
+      const extraCaPath = path.join(TEST_TMP_DIR, 'unreadable-ca.pem');
+      const extraCaContent =
+        '-----BEGIN CERTIFICATE-----\nunreadable-ca\n-----END CERTIFICATE-----';
+      await fs.promises.writeFile(extraCaPath, extraCaContent, 'utf8');
+      // Remove read permissions
+      await fs.promises.chmod(extraCaPath, 0o000);
+
+      // Set NODE_EXTRA_CA_CERTS to the unreadable file
+      const originalEnv = process.env.NODE_EXTRA_CA_CERTS;
+      process.env.NODE_EXTRA_CA_CERTS = extraCaPath;
+
+      onTestFinished(async () => {
+        await fs.promises.rm(image.path, { force: true });
+        // Restore permissions so we can delete the file
+        await fs.promises.chmod(extraCaPath, 0o644).catch(() => {
+          /* ignore permission errors during cleanup */
+        });
+        await fs.promises.rm(extraCaPath, { force: true });
+        consoleWarnSpy.mockRestore();
+        // Restore original env
+        if (originalEnv === undefined) {
+          delete process.env.NODE_EXTRA_CA_CERTS;
+        } else {
+          process.env.NODE_EXTRA_CA_CERTS = originalEnv;
+        }
+      });
+
+      // Download with custom CA - should warn about NODE_EXTRA_CA_CERTS
+      await expect(download(image, { ca: customCa })).resolves.toStrictEqual(
+        image,
+      );
+
+      // Verify warning was logged
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('NODE_EXTRA_CA_CERTS'),
+      );
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Unable to read'),
+      );
+    });
+
+    it('should not warn when NODE_EXTRA_CA_CERTS file exists and can be read', async ({
+      onTestFinished,
+    }) => {
+      const image = parseImageParams(`${BASE_URL}/image.jpg`);
+      const customCa =
+        '-----BEGIN CERTIFICATE-----\ntest-ca\n-----END CERTIFICATE-----';
+      const consoleWarnSpy = vi
+        .spyOn(console, 'warn')
+        .mockImplementation(() => {
+          /* suppress console output during test */
+        });
+
+      // Create a valid CA file
+      const extraCaPath = path.join(TEST_TMP_DIR, 'extra-ca.pem');
+      const extraCaContent =
+        '-----BEGIN CERTIFICATE-----\nextra-ca\n-----END CERTIFICATE-----';
+      await fs.promises.writeFile(extraCaPath, extraCaContent, 'utf8');
+
+      // Set NODE_EXTRA_CA_CERTS to the valid file
+      const originalEnv = process.env.NODE_EXTRA_CA_CERTS;
+      process.env.NODE_EXTRA_CA_CERTS = extraCaPath;
+
+      onTestFinished(async () => {
+        await fs.promises.rm(image.path, { force: true });
+        await fs.promises.rm(extraCaPath, { force: true });
+        consoleWarnSpy.mockRestore();
+        // Restore original env
+        if (originalEnv === undefined) {
+          delete process.env.NODE_EXTRA_CA_CERTS;
+        } else {
+          process.env.NODE_EXTRA_CA_CERTS = originalEnv;
+        }
+      });
+
+      // Download with custom CA - should not warn
+      await expect(download(image, { ca: customCa })).resolves.toStrictEqual(
+        image,
+      );
+
+      // Verify no warning about NODE_EXTRA_CA_CERTS was logged
+      const nodeExtraCaCalls = consoleWarnSpy.mock.calls.filter(
+        (call: unknown[]) =>
+          typeof call[0] === 'string' &&
+          call[0].includes('NODE_EXTRA_CA_CERTS'),
+      );
+      expect(nodeExtraCaCalls.length).toBe(0);
+    });
+  });
 });

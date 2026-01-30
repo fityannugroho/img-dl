@@ -29,6 +29,8 @@ const cli = meow(
     -h, --help                Show this help message
     -H, --header=<header>     The header to send with the request. Can be used multiple times
     -i, --increment           Enable increment mode. Default: false
+        --insecure            Disable certificate verification. Default: false
+        --ca-file=<path>      The certificate authority file to trust.
         --interval=<number>   The interval between each batch of requests in milliseconds
     -n, --name=<filename>     The filename. Default: original filename or timestamp
         --max-retry=<number>  Set the maximum number of times to retry the request if it fails
@@ -69,6 +71,12 @@ const cli = meow(
       increment: {
         shortFlag: 'i',
         type: 'boolean',
+      },
+      insecure: {
+        type: 'boolean',
+      },
+      caFile: {
+        type: 'string',
       },
       interval: {
         type: 'number',
@@ -137,8 +145,16 @@ export async function runner(
   }
 
   if (!flags.silent) {
+    if (flags.insecure) {
+      console.log(
+        warningLog(
+          '\nWarning: SSL certificate verification is disabled (--insecure). This makes the connection vulnerable to man-in-the-middle attacks. Use with caution.',
+        ),
+      );
+    }
+
     console.log(
-      `\n${dimLog('Downloading...')}\n${warningLog('Press Ctrl+C to abort')}`,
+      `${dimLog('Downloading...')}\n${warningLog('Press Ctrl+C to abort')}`,
     );
   }
 
@@ -170,6 +186,18 @@ export async function runner(
   }
 
   const abortController = new AbortController();
+
+  // Load CA file if provided
+  let ca: string | Buffer | undefined;
+  if (flags.caFile) {
+    try {
+      ca = fs.readFileSync(path.resolve(flags.caFile));
+    } catch (error) {
+      throw new ArgumentError(
+        `Failed to read CA file: ${(error as Error).message}`,
+      );
+    }
+  }
 
   const onSigint = () => {
     bar.stop();
@@ -213,6 +241,8 @@ export async function runner(
         step: flags.step,
         timeout: flags.timeout,
         signal: abortController.signal,
+        ...(flags.insecure ? { rejectUnauthorized: false } : {}),
+        ca,
       }).then(resolve, rejects);
     });
   } finally {

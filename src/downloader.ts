@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { pipeline } from 'node:stream/promises';
+import tls from 'node:tls';
 import got, { type PlainResponse } from 'got';
 import sanitize from 'sanitize-filename';
 import sharp, { type FormatEnum } from 'sharp';
@@ -59,6 +60,20 @@ export type DownloadOptions = {
    * The signal which can be used to abort requests.
    */
   signal?: AbortSignal;
+  /**
+   * Set to `false` to disable certificate verification.
+   *
+   * This is useful when the server does not send intermediate certificates or uses self-signed certificates.
+   *
+   * @default true
+   */
+  rejectUnauthorized?: boolean;
+  /**
+   * The certificate authority to trust.
+   *
+   * This is useful when the server does not send intermediate certificates.
+   */
+  ca?: string | Buffer;
 };
 
 /**
@@ -190,6 +205,28 @@ export async function download(img: Image, options: DownloadOptions = {}) {
     retry: { limit: options.maxRetry },
     headers: options.headers,
     signal: options.signal,
+    https: {
+      rejectUnauthorized: options.rejectUnauthorized,
+      certificateAuthority: (() => {
+        if (!options.ca) return undefined;
+
+        const ca = [...tls.rootCertificates, options.ca];
+        const extraCaPath = process.env.NODE_EXTRA_CA_CERTS;
+
+        if (extraCaPath && fs.existsSync(extraCaPath)) {
+          try {
+            ca.push(fs.readFileSync(extraCaPath));
+          } catch {
+            console.warn(
+              'Warning: Unable to read NODE_EXTRA_CA_CERTS file. ' +
+                'Continuing with system root CAs and any user-provided CA.',
+            );
+          }
+        }
+
+        return ca;
+      })(),
+    },
   });
 
   let writeStream: fs.WriteStream | undefined;
