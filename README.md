@@ -57,6 +57,16 @@ Install locally:
 npm install img-dl
 ```
 
+### Use as AI Skill
+
+You can use **img-dl** as a skill for AI assistants using the [`skills` CLI](https://github.com/vercel-labs/skills):
+
+```bash
+npx skills add fityannugroho/img-dl
+```
+
+This will install the img-dl skill to your AI assistant, allowing it to download images from URLs through natural language commands.
+
 ## Usage
 
 ### Command line
