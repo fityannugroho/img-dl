@@ -1,6 +1,6 @@
 # img-dl
 
-Downloade image(s), by command or programmatically. The alternative for `image-downloader` package (see the [features](#features)).
+Download image(s), by command or programmatically. The alternative for `image-downloader` package (see the [features](#features)).
 
 [![MIT license](https://img.shields.io/github/license/fityannugroho/img-dl.svg)](https://github.com/fityannugroho/img-dl/blob/main/LICENSE)
 [![npm version](https://img.shields.io/npm/v/img-dl.svg)](https://www.npmjs.com/package/img-dl)
@@ -382,12 +382,12 @@ Default: `undefined`
 
 Set timeout for each request in milliseconds.
 
-<!-- Project links -->
-
-[p1]: https://www.npmjs.com/package/image-downloader
-
 ## Support This Project
 
 Give a ⭐️ if this project helped you!
 
 Also please consider supporting this project with a **donation**. Your donation will help us maintain and develop this project and provide you with better support.
+
+<!-- Project links -->
+
+[p1]: https://www.npmjs.com/package/image-downloader
