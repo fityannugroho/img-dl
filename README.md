@@ -1,6 +1,6 @@
 # img-dl
 
-Downloade image(s), by command or programmatically. The alternative for `image-downloader` package (see the [features](#features)).
+Download image(s), by command or programmatically. The alternative for `image-downloader` package (see the [features](#features)).
 
 [![MIT license](https://img.shields.io/github/license/fityannugroho/img-dl.svg)](https://github.com/fityannugroho/img-dl/blob/main/LICENSE)
 [![npm version](https://img.shields.io/npm/v/img-dl.svg)](https://www.npmjs.com/package/img-dl)
@@ -56,6 +56,16 @@ Install locally:
 ```bash
 npm install img-dl
 ```
+
+### Use as AI Skill
+
+You can use **img-dl** as a skill for AI assistants using the [`skills` CLI](https://github.com/vercel-labs/skills):
+
+```bash
+npx skills add fityannugroho/img-dl
+```
+
+This will install the img-dl skill to your AI assistant, allowing it to download images from URLs through natural language commands.
 
 ## Usage
 
@@ -382,12 +392,12 @@ Default: `undefined`
 
 Set timeout for each request in milliseconds.
 
-<!-- Project links -->
-
-[p1]: https://www.npmjs.com/package/image-downloader
-
 ## Support This Project
 
 Give a ⭐️ if this project helped you!
 
 Also please consider supporting this project with a **donation**. Your donation will help us maintain and develop this project and provide you with better support.
+
+<!-- Project links -->
+
+[p1]: https://www.npmjs.com/package/image-downloader

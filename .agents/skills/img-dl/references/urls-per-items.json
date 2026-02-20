@@ -1,0 +1,13 @@
+[
+  {
+    "url": "https://example.com/me/avatar.jpg",
+    "directory": "myimages",
+    "name": "myavatar",
+    "extension": "png"
+  },
+  {
+    "url": "https://example.com/janedoe/avatar.jpg",
+    "directory": "friends",
+    "name": "janedoe"
+  }
+]
