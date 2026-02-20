@@ -40,13 +40,13 @@
     "node": ">=20.9"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.3.13",
+    "@biomejs/biome": "2.4.3",
     "@types/cli-progress": "^3.11.6",
-    "@types/node": "^25.1.0",
+    "@types/node": "^25.3.0",
     "@vitest/coverage-v8": "^4.0.18",
     "execa": "^9.6.1",
     "file-type": "^21.3.0",
-    "msw": "^2.12.7",
+    "msw": "^2.12.10",
     "tsup": "^8.5.1",
     "typescript": "^5.9.3",
     "vitest": "^4.0.18"
