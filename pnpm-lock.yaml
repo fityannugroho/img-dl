@@ -19,7 +19,7 @@ importers:
         version: 14.6.6
       meow:
         specifier: ^14.0.0
-        version: 14.0.0
+        version: 14.1.0
       p-queue:
         specifier: ^9.1.0
         version: 9.1.0
@@ -1138,8 +1138,8 @@ packages:
     resolution: {integrity: sha512-hXdUTZYIVOt1Ex//jAQi+wTZZpUpwBj/0QsOzqegb3rGMMeJiSEu5xLHnYfBrRV4RH2+OCSOO95Is/7x1WJ4bw==}
     engines: {node: '>=10'}
 
-  meow@14.0.0:
-    resolution: {integrity: sha512-JhC3R1f6dbspVtmF3vKjAWz1EVIvwFrGGPLSdU6rK79xBwHWTuHoLnRX/t1/zHS1Ch1Y2UtIrih7DAHuH9JFJA==}
+  meow@14.1.0:
+    resolution: {integrity: sha512-EDYo6VlmtnumlcBCbh1gLJ//9jvM/ndXHfVXIFrZVr6fGcwTUyCTFNTLCKuY3ffbK8L/+3Mzqnd58RojiZqHVw==}
     engines: {node: '>=20'}
 
   mimic-response@4.0.0:
@@ -2431,7 +2431,7 @@ snapshots:
     dependencies:
       semver: 7.7.2
 
-  meow@14.0.0: {}
+  meow@14.1.0: {}
 
   mimic-response@4.0.0: {}
 
