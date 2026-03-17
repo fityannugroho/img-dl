@@ -142,4 +142,4 @@ async function imgdl(
 }
 
 export default imgdl;
-export { ImageOptions, DownloadOptions };
+export { DownloadOptions, ImageOptions };
