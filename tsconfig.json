@@ -15,7 +15,8 @@
     "paths": {
       "~/*": ["src/*"]
     },
-    "strict": true
+    "strict": true,
+    "ignoreDeprecations": "6.0"
   },
   "exclude": ["node_modules", "lib"]
 }
