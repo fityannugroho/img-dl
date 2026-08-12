@@ -1,0 +1,24 @@
+packages:
+  - .
+
+allowBuilds:
+  esbuild: true
+  msw: true
+  sharp: true
+
+supportedArchitectures:
+  os:
+    - linux
+    - win32
+    - darwin
+  cpu:
+    - x64
+    - arm64
+
+overrides:
+  # vitest 4.x declares vite ^6||^7||^8; lockfile lama resolve ke 8.0.8 (vulnerable,
+  # GHSA-fx2h-pf6j-xcff server.fs.deny bypass, patched >=8.0.16). Paksa resolve patched.
+  vitest>vite: '>=8.0.16'
+  # tsup@8.5.1 pin esbuild ^0.27.0 (vulnerable GHSA-g7r4-m6w7-qqqr, patched >=0.28.1).
+  # Bump tsup ke 9.x = major bump di luar izin; override scoped minimal.
+  tsup>esbuild: '>=0.28.1'
