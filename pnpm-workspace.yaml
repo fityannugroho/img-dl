@@ -22,3 +22,8 @@ overrides:
   # tsup@8.5.1 pin esbuild ^0.27.0 (vulnerable GHSA-g7r4-m6w7-qqqr, patched >=0.28.1).
   # Bump tsup ke 9.x = major bump di luar izin; override scoped minimal.
   tsup>esbuild: '>=0.28.1'
+
+# file-type@22.0.2 released 2026-08-15; pnpm 11 default supply-chain policy
+# (minimumReleaseAge) menolak paket <1 hari. Exception tercatat agar lockfile konsisten.
+minimumReleaseAgeExclude:
+  - file-type@22.0.2
