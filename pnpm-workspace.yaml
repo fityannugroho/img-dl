@@ -16,9 +16,15 @@ supportedArchitectures:
     - arm64
 
 overrides:
-  # vitest 4.x declares vite ^6||^7||^8; lockfile lama resolve ke 8.0.8 (vulnerable,
-  # GHSA-fx2h-pf6j-xcff server.fs.deny bypass, patched >=8.0.16). Paksa resolve patched.
+  # vitest 4.x declares vite ^6||^7||^8; the old lockfile resolved to 8.0.8 (vulnerable,
+  # GHSA-fx2h-pf6j-xcff server.fs.deny bypass, patched >=8.0.16). Force the patched version.
   vitest>vite: '>=8.0.16'
-  # tsup@8.5.1 pin esbuild ^0.27.0 (vulnerable GHSA-g7r4-m6w7-qqqr, patched >=0.28.1).
-  # Bump tsup ke 9.x = major bump di luar izin; override scoped minimal.
+  # tsup@8.5.1 pins esbuild ^0.27.0 (vulnerable GHSA-g7r4-m6w7-qqqr, patched >=0.28.1).
+  # Bumping tsup to 9.x is a major bump outside this PR's scope; use a minimal scoped override.
   tsup>esbuild: '>=0.28.1'
+
+# file-type@22.0.2 was released on 2026-08-15; pnpm 11's default supply-chain policy
+# (minimumReleaseAge) rejects packages younger than 1 day. Record the exception so the
+# lockfile stays consistent for pnpm 11 users (CI uses pnpm 10.34.5, which ignores it).
+minimumReleaseAgeExclude:
+  - file-type@22.0.2
