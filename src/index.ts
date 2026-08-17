@@ -134,9 +134,10 @@ async function imgdl(
 
       // Enqueue without awaiting: let the queue run `step` downloads at once.
       void queue
-        .add(({ signal }) => download(img, { ...downloadOptions, signal }), {
-          signal: downloadOptions?.signal,
-        })
+        .add(
+          ({ signal }) => download(img, { ...downloadOptions, signal }),
+          { signal: downloadOptions?.signal },
+        )
         .then((image) => {
           if (image) {
             onSuccess?.(image);
