@@ -2,6 +2,7 @@ import { setMaxListeners } from 'node:events';
 import path from 'node:path';
 import PQueue from 'p-queue';
 import { DEFAULT_INTERVAL, DEFAULT_STEP } from './constanta.js';
+import { firstFreeIndex, numberedName } from './unique-name.js';
 import {
   DownloadOptions,
   download,
@@ -100,6 +101,7 @@ async function imgdl(
   }
 
   const countNames = new Map<string, number>();
+  const firstFreeCache = new Map<string, number>();
 
   for (const _url of urls) {
     // Get image URL and options
@@ -107,32 +109,43 @@ async function imgdl(
       typeof _url === 'string' ? { url: _url } : _url;
 
     try {
-      // Validate and parse the image parameters
-      const img = parseImageParams(imgUrl, {
+      // Validate and parse the image parameters (no disk scan inside anymore)
+      const parsed = parseImageParams(imgUrl, {
         directory: imgOptions.directory || directory,
         name: imgOptions.name || name,
         extension: imgOptions.extension || extension,
       });
 
-      // Make sure the name is unique in the destination directory
-      const nameKey = `${img.directory}/${img.name}.${img.extension}`;
-      const currentCount = countNames.get(nameKey) || 0;
+      // Batch-scoped, concurrency-safe unique naming:
+      // names are assigned synchronously before any download worker starts.
+      const nameKey = `${parsed.directory}/${parsed.name}.${parsed.extension}`;
+      const start =
+        firstFreeCache.get(nameKey) ??
+        firstFreeIndex(parsed.directory, parsed.name, parsed.extension);
+      firstFreeCache.set(nameKey, start);
+      const batchCount = countNames.get(nameKey) || 0;
+      countNames.set(nameKey, batchCount + 1);
 
-      // Add suffix for duplicates
-      img.name = img.name + (currentCount > 0 ? ` (${currentCount})` : '');
-      countNames.set(nameKey, currentCount + 1);
-      // Always rebuild path to handle suffix changes
+      const img: Image = {
+        ...parsed,
+        name: numberedName(parsed.name, start + batchCount),
+      };
       img.path = path.resolve(img.directory, `${img.name}.${img.extension}`);
 
-      // Add the download task to queue
-      const image = await queue.add(
-        ({ signal }) => download(img, { ...downloadOptions, signal }),
-        { signal: downloadOptions?.signal },
-      );
-
-      if (image) {
-        onSuccess?.(image);
-      }
+      // Enqueue without awaiting: let the queue run `step` downloads at once.
+      void queue
+        .add(
+          ({ signal }) => download(img, { ...downloadOptions, signal }),
+          { signal: downloadOptions?.signal },
+        )
+        .then((image) => {
+          if (image) {
+            onSuccess?.(image);
+          }
+        })
+        .catch((error) => {
+          onError?.(error as Error, imgUrl);
+        });
     } catch (error) {
       onError?.(error as Error, imgUrl);
     }
