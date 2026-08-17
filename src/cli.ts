@@ -144,130 +144,145 @@ export async function runner(
     cli.showHelp(0);
   }
 
-  if (!flags.silent) {
-    if (flags.insecure) {
-      console.log(
-        warningLog(
-          '\nWarning: SSL certificate verification is disabled (--insecure). This makes the connection vulnerable to man-in-the-middle attacks. Use with caution.',
-        ),
-      );
-    }
-
-    console.log(
-      `${dimLog('Downloading...')}\n${warningLog('Press Ctrl+C to abort')}`,
-    );
-  }
-
-  const separator = dimLog('|');
-  const bar = new cliProgress.SingleBar({
-    format: `{percentage}% [{bar}] {value}/{total} ${separator} ${successLog('✅ {success}')} ${separator} ${errorLog('❌ {errorCount}')} ${separator} ETA: {eta_formatted} ${dimLog('/ {duration_formatted}')}`,
-    hideCursor: null,
-    barsize: 24,
-  });
-  let success = 0;
-  let errorCount = 0;
-
-  if (!flags.silent && sources.length > 1) {
-    bar.start(sources.length, 0, { success, errorCount });
-  }
-
-  // Validate and convert headers
-  const headers: Options['headers'] = {};
-  if (flags.header) {
-    for (const header of flags.header) {
-      const separator = header.indexOf(':');
-
-      if (separator === -1) {
-        throw new ArgumentError('Invalid header format');
-      }
-
-      const name = header.slice(0, separator).trim();
-      const value = header.slice(separator + 1).trim();
-
-      if (!name || !value) {
-        throw new ArgumentError('Invalid header format');
-      }
-
-      headers[name] = value;
-    }
-  }
-
-  const abortController = new AbortController();
-
-  // Load CA file if provided
-  let ca: string | Buffer | undefined;
-  if (flags.caFile) {
-    try {
-      ca = fs.readFileSync(path.resolve(flags.caFile));
-    } catch (error) {
-      throw new ArgumentError(
-        `Failed to read CA file: ${(error as Error).message}`,
-      );
-    }
-  }
-
-  const onSigint = () => {
-    bar.stop();
-    console.log(dimLog('\nAborting...'));
-    abortController.abort();
-  };
-  process.on('SIGINT', onSigint);
-
   try {
-    await new Promise<void>((resolve, rejects) => {
-      imgdl(sources, {
-        directory: flags.dir,
-        name: flags.name,
-        extension: flags.ext,
-        headers,
-        interval: flags.interval,
-        onSuccess: () => {
-          success += 1;
-          if (!flags.silent) {
-            bar.increment({ success });
-          }
-        },
-        onError: (error, url) => {
-          if (
-            error instanceof ArgumentError ||
-            error instanceof DirectoryError
-          ) {
-            return rejects(error);
-          }
-
-          errorCount += 1;
-          if (!flags.silent) {
-            bar.increment({ errorCount });
-          }
-          fs.appendFileSync(
-            path.resolve(flags.dir || process.cwd(), 'error.log'),
-            `${new Date().toISOString()} failed download from ${url}, ${error.name}: ${error.message}\n`,
-          );
-        },
-        maxRetry: flags.maxRetry,
-        step: flags.step,
-        timeout: flags.timeout,
-        signal: abortController.signal,
-        ...(flags.insecure ? { rejectUnauthorized: false } : {}),
-        ca,
-      }).then(resolve, rejects);
-    });
-  } finally {
-    // Always cleanup the SIGINT listener to avoid leaks in repeated invocations (e.g., tests)
-    process.off('SIGINT', onSigint);
-
     if (!flags.silent) {
-      bar.stop();
-      console.log(dimLog('Done!'));
-
-      if (errorCount) {
+      if (flags.insecure) {
         console.log(
-          errorLog(
-            `${errorCount} image${errorCount > 1 ? 's' : ''} failed to download. See error.log for details.`,
+          warningLog(
+            '\nWarning: SSL certificate verification is disabled (--insecure). This makes the connection vulnerable to man-in-the-middle attacks. Use with caution.',
           ),
         );
       }
+
+      console.log(
+        `${dimLog('Downloading...')}\n${warningLog('Press Ctrl+C to abort')}`,
+      );
     }
+
+    const separator = dimLog('|');
+    const bar = new cliProgress.SingleBar({
+      format: `{percentage}% [{bar}] {value}/{total} ${separator} ${successLog('✅ {success}')} ${separator} ${errorLog('❌ {errorCount}')} ${separator} ETA: {eta_formatted} ${dimLog('/ {duration_formatted}')}`,
+      hideCursor: null,
+      barsize: 24,
+    });
+    let success = 0;
+    let errorCount = 0;
+
+    if (!flags.silent && sources.length > 1) {
+      bar.start(sources.length, 0, { success, errorCount });
+    }
+
+    // Validate and convert headers (preserve colons in values)
+    const headers: Options['headers'] = {};
+    if (flags.header) {
+      for (const header of flags.header) {
+        const idx = header.indexOf(':');
+
+        if (idx === -1) {
+          throw new ArgumentError('Invalid header format');
+        }
+
+        const name = header.slice(0, idx).trim();
+        const value = header.slice(idx + 1).trim();
+
+        if (!name || !value) {
+          throw new ArgumentError('Invalid header format');
+        }
+
+        headers[name] = value;
+      }
+    }
+
+    const abortController = new AbortController();
+
+    // Load CA file if provided
+    let ca: string | Buffer | undefined;
+    if (flags.caFile) {
+      try {
+        ca = fs.readFileSync(path.resolve(flags.caFile));
+      } catch (error) {
+        throw new ArgumentError(
+          `Failed to read CA file: ${(error as Error).message}`,
+        );
+      }
+    }
+
+    const onSigint = () => {
+      bar.stop();
+      console.log(dimLog('\nAborting...'));
+      abortController.abort();
+    };
+    process.on('SIGINT', onSigint);
+
+    try {
+      await new Promise<void>((resolve, rejects) => {
+        imgdl(sources, {
+          directory: flags.dir,
+          name: flags.name,
+          extension: flags.ext,
+          headers,
+          interval: flags.interval,
+          onSuccess: () => {
+            success += 1;
+            if (!flags.silent) {
+              bar.increment({ success });
+            }
+          },
+          onError: (error, url) => {
+            if (
+              error instanceof ArgumentError ||
+              error instanceof DirectoryError
+            ) {
+              process.exitCode = 1;
+              abortController.abort();
+              return rejects(error);
+            }
+
+            if (abortController.signal.aborted) {
+              return;
+            }
+
+            errorCount += 1;
+            if (!flags.silent) {
+              bar.increment({ errorCount });
+            }
+            fs.appendFileSync(
+              path.resolve(flags.dir || process.cwd(), 'error.log'),
+              `${new Date().toISOString()} failed download from ${url}, ${error.name}: ${error.message}\n`,
+            );
+          },
+          maxRetry: flags.maxRetry,
+          step: flags.step,
+          timeout: flags.timeout,
+          signal: abortController.signal,
+          ...(flags.insecure ? { rejectUnauthorized: false } : {}),
+          ca,
+        }).then(resolve, rejects);
+      });
+    } finally {
+      // Always cleanup the SIGINT listener to avoid leaks in repeated invocations (e.g., tests)
+      process.off('SIGINT', onSigint);
+
+      if (!flags.silent) {
+        bar.stop();
+        console.log(dimLog('Done!'));
+
+        if (errorCount) {
+          console.log(
+            errorLog(
+              `${errorCount} image${errorCount > 1 ? 's' : ''} failed to download. See error.log for details.`,
+            ),
+          );
+        }
+      }
+
+      if (errorCount > 0) {
+        process.exitCode = 1;
+      }
+    }
+  } catch (error) {
+    process.exitCode = 1;
+    throw error;
   }
 }
 
@@ -277,5 +292,6 @@ async function bootstrap() {
 }
 
 bootstrap().catch((error: Error) => {
+  process.exitCode = 1;
   console.error(errorLog(`\n${error.name}: ${error.message}`));
 });
