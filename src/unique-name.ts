@@ -13,7 +13,10 @@ export function firstFreeIndex(
   let n = 0;
   while (
     fs.existsSync(
-      path.join(directory, n === 0 ? `${base}.${ext}` : `${base} (${n}).${ext}`),
+      path.join(
+        directory,
+        n === 0 ? `${base}.${ext}` : `${base} (${n}).${ext}`,
+      ),
     )
   ) {
     n += 1;
