@@ -1,5 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { HttpResponse, http } from 'msw';
 import {
   afterAll,
   afterEach,
@@ -370,6 +372,70 @@ describe('cli', () => {
 
       // Ensure no errors were logged to error.log
       expect(await hasErrorLogContent()).toBe(false);
+    });
+  });
+
+  describe('Numeric flag validation', () => {
+    it.each([
+      ['--step', 0],
+      ['--step', -1],
+      ['--interval', -5],
+      ['--timeout', -1],
+      ['--max-retry', -1],
+      ['--start', -1],
+      ['--end', -1],
+    ])('should reject %s=%s', async (flag, value) => {
+      const flags = { [flag]: value } as CliFlags;
+      const input = [testUrl];
+
+      await expect(runner(input, flags)).rejects.toThrow(ArgumentError);
+    });
+
+    it('should reject --step=0 with a clean ArgumentError (not a p-queue TypeError)', async () => {
+      const flags = { '--step': 0 } as unknown as CliFlags;
+      const input = [testUrl];
+
+      await expect(runner(input, flags)).rejects.toThrow(ArgumentError);
+      await expect(runner(input, flags)).rejects.toThrow(
+        'must be an integer >= 1',
+      );
+    });
+  });
+
+  describe('SIGINT abort behavior', () => {
+    it('should not record aborted items as failures in error.log', async () => {
+      const saved = process.exitCode;
+      process.exitCode = 0;
+
+      // Add a slow route so the abort fires mid-download
+      server.use(
+        http.get(`${BASE_URL}/slow-abort.jpg`, async () => {
+          await new Promise((resolve) => setTimeout(resolve, 200));
+          const imagePath = path.resolve(
+            path.dirname(fileURLToPath(import.meta.url)),
+            'fixtures',
+            'image.jpg',
+          );
+          return new HttpResponse(fs.createReadStream(imagePath), {
+            headers: { 'Content-Type': 'image/*' },
+          });
+        }),
+      );
+
+      const flags: CliFlags = {} as CliFlags;
+      const input = [
+        `${BASE_URL}/slow-abort.jpg`,
+        `${BASE_URL}/slow-abort.jpg`,
+        `${BASE_URL}/slow-abort.jpg`,
+      ];
+
+      const runPromise = runner(input, flags);
+      await new Promise((resolve) => setTimeout(resolve, 10));
+      process.emit('SIGINT');
+      await runPromise;
+
+      expect(await hasErrorLogContent()).toBe(false);
+      process.exitCode = saved;
     });
   });
 

@@ -195,6 +195,24 @@ export async function runner(
 
     const abortController = new AbortController();
 
+    // Validate numeric flags before anything runs
+    const requireInt = (v: number | undefined, label: string, min: number) => {
+      if (v === undefined) return;
+      if (!Number.isInteger(v) || v < min) {
+        throw new ArgumentError(`${label} must be an integer >= ${min}`);
+      }
+    };
+    requireInt(flags.start ?? flags['--start'], '--start', 0);
+    requireInt(flags.end ?? flags['--end'], '--end', 0);
+    requireInt(flags.interval ?? flags['--interval'], '--interval', 0);
+    requireInt(flags.timeout ?? flags['--timeout'], '--timeout', 0);
+    requireInt(
+      flags.maxRetry ?? flags['--max-retry'] ?? flags['--maxRetry'],
+      '--maxRetry',
+      0,
+    );
+    requireInt(flags.step ?? flags['--step'], '--step', 1);
+
     // Load CA file if provided
     let ca: string | Buffer | undefined;
     if (flags.caFile) {
@@ -265,7 +283,11 @@ export async function runner(
 
       if (!flags.silent) {
         bar.stop();
-        console.log(dimLog('Done!'));
+        if (abortController.signal.aborted) {
+          console.log(dimLog('\nAborted.'));
+        } else {
+          console.log(dimLog('Done!'));
+        }
 
         if (errorCount) {
           console.log(
