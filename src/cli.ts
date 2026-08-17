@@ -175,7 +175,14 @@ export async function runner(
   const headers: Options['headers'] = {};
   if (flags.header) {
     for (const header of flags.header) {
-      const [name, value] = header.split(':').map((part) => part.trim());
+      const separator = header.indexOf(':');
+
+      if (separator === -1) {
+        throw new ArgumentError('Invalid header format');
+      }
+
+      const name = header.slice(0, separator).trim();
+      const value = header.slice(separator + 1).trim();
 
       if (!name || !value) {
         throw new ArgumentError('Invalid header format');
