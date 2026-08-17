@@ -1,5 +1,6 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { HttpResponse, http } from 'msw';
 import {
   afterAll,
   afterEach,
@@ -668,5 +669,83 @@ describe('`imgdl`', () => {
     expect(images.find((img) => img.originalExtension === 'heic')?.name).toBe(
       'image',
     );
+  });
+
+  it('should create a suffixed file when the name already exists on disk', async ({
+    onTestFinished,
+  }) => {
+    const dir = path.join(TEST_TMP_DIR, 'existing-image');
+    await fs.mkdir(dir, { recursive: true });
+    await fs.writeFile(path.join(dir, 'image.jpg'), '');
+
+    const images: Image[] = [];
+    const onSuccess = vi.fn().mockImplementation((image) => images.push(image));
+    const onError = vi.fn();
+
+    onTestFinished(async () => {
+      await fs.rm(dir, { recursive: true, force: true });
+    });
+
+    await imgdl([{ url: `${BASE_URL}/image.jpg`, directory: dir }], {
+      onSuccess,
+      onError,
+    });
+
+    expect(onError).not.toHaveBeenCalled();
+    expect(onSuccess).toHaveBeenCalledTimes(1);
+    expect(images[0].name).toBe('image (1)');
+    await expect(
+      fs.access(path.join(dir, 'image (1).jpg')),
+    ).resolves.toBeUndefined();
+  });
+
+  it('should download images concurrently when step is greater than 1', async ({
+    onTestFinished,
+  }) => {
+    const SLOW_DELAY = 200;
+    const dir = path.join(TEST_TMP_DIR, 'concurrency');
+    let inflight = 0;
+    let maxInflight = 0;
+
+    // All four URLs hit this single delayed handler so the in-flight counter
+    // observes real overlap when the queue runs `step` downloads at once.
+    server.use(
+      http.get(`${BASE_URL}/slow.jpg`, async () => {
+        inflight += 1;
+        maxInflight = Math.max(maxInflight, inflight);
+        await new Promise((resolve) => setTimeout(resolve, SLOW_DELAY));
+        inflight -= 1;
+        return new HttpResponse(
+          await fs.readFile(new URL('./fixtures/image.jpg', import.meta.url)),
+          { headers: { 'Content-Type': 'image/*' } },
+        );
+      }),
+    );
+
+    const images: Image[] = [];
+    const onSuccess = vi.fn().mockImplementation((image) => images.push(image));
+    const onError = vi.fn();
+
+    onTestFinished(async () => {
+      await fs.rm(dir, { recursive: true, force: true });
+    });
+
+    const start = Date.now();
+    await imgdl(
+      [
+        `${BASE_URL}/slow.jpg`,
+        `${BASE_URL}/slow.jpg`,
+        `${BASE_URL}/slow.jpg`,
+        `${BASE_URL}/slow.jpg`,
+      ],
+      { directory: dir, step: 2, interval: 0, onSuccess, onError },
+    );
+    const elapsed = Date.now() - start;
+
+    expect(onError).not.toHaveBeenCalled();
+    expect(onSuccess).toHaveBeenCalledTimes(4);
+    expect(maxInflight).toBeGreaterThan(1);
+    // 4 × 200ms serialized would take ~800ms; with step 2 it takes ~400ms.
+    expect(elapsed).toBeLessThan(2.5 * SLOW_DELAY);
   });
 });

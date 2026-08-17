@@ -2,13 +2,13 @@ import { setMaxListeners } from 'node:events';
 import path from 'node:path';
 import PQueue from 'p-queue';
 import { DEFAULT_INTERVAL, DEFAULT_STEP } from './constanta.js';
-import { firstFreeIndex, numberedName } from './unique-name.js';
 import {
   DownloadOptions,
   download,
   ImageOptions,
   parseImageParams,
 } from './downloader.js';
+import { firstFreeIndex, numberedName } from './unique-name.js';
 
 export type Image = {
   /**
@@ -134,10 +134,9 @@ async function imgdl(
 
       // Enqueue without awaiting: let the queue run `step` downloads at once.
       void queue
-        .add(
-          ({ signal }) => download(img, { ...downloadOptions, signal }),
-          { signal: downloadOptions?.signal },
-        )
+        .add(({ signal }) => download(img, { ...downloadOptions, signal }), {
+          signal: downloadOptions?.signal,
+        })
         .then((image) => {
           if (image) {
             onSuccess?.(image);
