@@ -134,9 +134,16 @@ async function imgdl(
 
       // Enqueue without awaiting: let the queue run `step` downloads at once.
       void queue
+<<<<<<< HEAD
         .add(({ signal }) => download(img, { ...downloadOptions, signal }), {
           signal: downloadOptions?.signal,
         })
+=======
+        .add(
+          ({ signal }) => download(img, { ...downloadOptions, signal }),
+          { signal: downloadOptions?.signal },
+        )
+>>>>>>> 3517fb8 (perf: restore real bulk concurrency in the imgdl loop)
         .then((image) => {
           if (image) {
             onSuccess?.(image);
