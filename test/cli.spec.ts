@@ -458,4 +458,57 @@ describe('cli', () => {
       expect(await hasErrorLogContent()).toBe(false);
     });
   });
+
+  it('should write error.log with the expected line structure', async () => {
+    const flags: CliFlags = {} as CliFlags;
+    const input = [`${BASE_URL}/non-existent-image.jpg`];
+
+    await expect(runner(input, flags)).resolves.toBeUndefined();
+
+    const logContent = await fs.promises.readFile(
+      path.join(TEST_TMP_DIR, 'error.log'),
+      'utf8',
+    );
+    expect(logContent).toMatch(
+      /\d{4}-\d{2}-\d{2}T[\d:.]+Z failed download from .+/,
+    );
+  });
+
+  it('should suppress console output with --silent', async () => {
+    const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {
+      /* suppress */
+    });
+
+    const flags: CliFlags = { silent: true } as CliFlags;
+    const input = [`${BASE_URL}/image.jpg`, `${BASE_URL}/non-existent.jpg`];
+
+    await expect(runner(input, flags)).resolves.toBeUndefined();
+
+    const logCalls = consoleSpy.mock.calls.filter(
+      (c) =>
+        typeof c[0] === 'string' &&
+        (c[0].includes('Done!') || c[0].includes('failed')),
+    );
+    expect(logCalls.length).toBe(0);
+    consoleSpy.mockRestore();
+  });
+
+  it('should reject with ArgumentError for unsupported extension', async () => {
+    const flags: CliFlags = {} as CliFlags;
+    const input = ['http://example.com/file.exe'];
+
+    await expect(runner(input, flags)).rejects.toThrow(ArgumentError);
+  });
+
+  it('should download two different base names and count both as successes', async () => {
+    const flags: CliFlags = {} as CliFlags;
+    const input = [`${BASE_URL}/image.jpg`, `${BASE_URL}/img-1.jpg`];
+
+    await expect(runner(input, flags)).resolves.toBeUndefined();
+
+    const files = await fs.promises.readdir(TEST_TMP_DIR);
+    const jpgFiles = files.filter((f) => f.toLowerCase().endsWith('.jpg'));
+    expect(jpgFiles.length).toBe(2);
+    expect(await hasErrorLogContent()).toBe(false);
+  });
 });

@@ -11,7 +11,7 @@ export default defineConfig({
     setupFiles: ['test/setup.ts'],
     coverage: {
       provider: 'v8',
-      exclude: [...defaultExclude, 'src/cli.ts', 'coverage', 'test'],
+      exclude: [...defaultExclude, 'coverage', 'test'],
     },
     fileParallelism: false,
   },
