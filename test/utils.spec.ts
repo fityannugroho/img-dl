@@ -9,6 +9,7 @@ import {
   numberedName,
   parseCsvLine,
   parseFileInput,
+  requireInt,
 } from '~/utils.js';
 import { TEST_TMP_DIR } from './helpers/paths.js';
 
@@ -301,5 +302,27 @@ describe('numberedName', () => {
 
   it('appends a numeric suffix for index greater than 0', () => {
     expect(numberedName('x', 3)).toBe('x (3)');
+  });
+});
+
+describe('requireInt', () => {
+  it('does nothing for undefined', () => {
+    expect(() => requireInt(undefined, '--test', 0)).not.toThrow();
+  });
+
+  it('does nothing for valid integer >= min', () => {
+    expect(() => requireInt(5, '--test', 0)).not.toThrow();
+  });
+
+  it('throws for non-integer', () => {
+    expect(() => requireInt(1.5, '--test', 0)).toThrow(ArgumentError);
+  });
+
+  it('throws for value below min', () => {
+    expect(() => requireInt(-1, '--test', 0)).toThrow(ArgumentError);
+  });
+
+  it('throws for zero when min is 1', () => {
+    expect(() => requireInt(0, '--step', 1)).toThrow(ArgumentError);
   });
 });

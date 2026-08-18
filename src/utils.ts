@@ -212,3 +212,15 @@ export function firstFreeIndex(
 export function numberedName(base: string, index: number): string {
   return index === 0 ? base : `${base} (${index})`;
 }
+
+/** Validate that a numeric flag is an integer >= min. */
+export function requireInt(
+  v: number | undefined,
+  label: string,
+  min: number,
+): void {
+  if (v === undefined) return;
+  if (!Number.isInteger(v) || v < min) {
+    throw new ArgumentError(`${label} must be an integer >= ${min}`);
+  }
+}

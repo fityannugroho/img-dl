@@ -8,7 +8,12 @@ import meow from 'meow';
 import ArgumentError from './errors/ArgumentError.js';
 import DirectoryError from './errors/DirectoryError.js';
 import imgdl, { type ImageOptions, type Options } from './index.js';
-import { generateDownloadUrls, isFilePath, parseFileInput } from './utils.js';
+import {
+  generateDownloadUrls,
+  isFilePath,
+  parseFileInput,
+  requireInt,
+} from './utils.js';
 
 const cli = meow(
   `
@@ -196,12 +201,6 @@ export async function runner(
     const abortController = new AbortController();
 
     // Validate numeric flags before anything runs
-    const requireInt = (v: number | undefined, label: string, min: number) => {
-      if (v === undefined) return;
-      if (!Number.isInteger(v) || v < min) {
-        throw new ArgumentError(`${label} must be an integer >= ${min}`);
-      }
-    };
     requireInt(flags.start ?? flags['--start'], '--start', 0);
     requireInt(flags.end ?? flags['--end'], '--end', 0);
     requireInt(flags.interval ?? flags['--interval'], '--interval', 0);
