@@ -8,7 +8,12 @@ import meow from 'meow';
 import ArgumentError from './errors/ArgumentError.js';
 import DirectoryError from './errors/DirectoryError.js';
 import imgdl, { type ImageOptions, type Options } from './index.js';
-import { generateDownloadUrls, isFilePath, parseFileInput } from './utils.js';
+import {
+  generateDownloadUrls,
+  isFilePath,
+  parseFileInput,
+  requireInt,
+} from './utils.js';
 
 const cli = meow(
   `
@@ -195,6 +200,18 @@ export async function runner(
 
     const abortController = new AbortController();
 
+    // Validate numeric flags before anything runs
+    requireInt(flags.start ?? flags['--start'], '--start', 0);
+    requireInt(flags.end ?? flags['--end'], '--end', 0);
+    requireInt(flags.interval ?? flags['--interval'], '--interval', 0);
+    requireInt(flags.timeout ?? flags['--timeout'], '--timeout', 0);
+    requireInt(
+      flags.maxRetry ?? flags['--max-retry'] ?? flags['--maxRetry'],
+      '--maxRetry',
+      0,
+    );
+    requireInt(flags.step ?? flags['--step'], '--step', 1);
+
     // Load CA file if provided
     let ca: string | Buffer | undefined;
     if (flags.caFile) {
@@ -265,7 +282,11 @@ export async function runner(
 
       if (!flags.silent) {
         bar.stop();
-        console.log(dimLog('Done!'));
+        if (abortController.signal.aborted) {
+          console.log(dimLog('\nAborted.'));
+        } else {
+          console.log(dimLog('Done!'));
+        }
 
         if (errorCount) {
           console.log(
