@@ -214,25 +214,6 @@ describe('parseImageParams', () => {
         );
       },
     );
-
-    it('generate suffix name if file path already exists', ({
-      onTestFinished,
-    }) => {
-      const url = 'https://example.com/image.jpg';
-      const options = { directory: 'images/me' };
-
-      fs.mkdirSync(options.directory, { recursive: true });
-
-      onTestFinished(() => {
-        fs.rmSync('images', { recursive: true, force: true });
-      });
-
-      fs.writeFileSync(path.resolve(options.directory, 'image.jpg'), '');
-      expect(parseImageParams(url, options).name).toBe('image (1)');
-
-      fs.writeFileSync(path.resolve(options.directory, 'image (1).jpg'), '');
-      expect(parseImageParams(url, options).name).toBe('image (2)');
-    });
   });
 });
 

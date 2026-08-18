@@ -28,7 +28,8 @@ export type ImageOptions = {
    *
    * Otherwise, it will be **'image'**.
    *
-   * If a name with same extension already exists, ` (1)`, ` (2)`, etc. will be added to the end of the name.
+   * If a file with the same name and extension already exists, the caller adds
+   * ` (1)`, ` (2)`, etc. to keep the path unique (see `src/index.ts`).
    */
   name?: string;
   /**
@@ -155,16 +156,7 @@ export function parseImageParams(url: string, options?: ImageOptions) {
     img.extension = img.originalExtension || DEFAULT_EXTENSION;
   }
 
-  // Make sure the path is unique, if not, add a number to the end of the name.
-  while (
-    fs.existsSync(path.join(img.directory, `${img.name}.${img.extension}`))
-  ) {
-    const match = img.name.match(/ \((\d+)\)$/);
-    const num = match ? Number.parseInt(match[1], 10) + 1 : 1;
-    img.name = `${img.name.replace(/ \(\d+\)$/, '')} (${num})`;
-  }
-
-  // Set path
+  // Set path (uniqueness is the caller's responsibility: see `src/index.ts`)
   img.path = path.join(img.directory, `${img.name}.${img.extension}`);
 
   return img;

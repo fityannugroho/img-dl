@@ -3,8 +3,10 @@ import path from 'node:path';
 import { beforeEach, describe, expect, it } from 'vitest';
 import ArgumentError from '~/errors/ArgumentError.js';
 import {
+  firstFreeIndex,
   generateDownloadUrls,
   isFilePath,
+  numberedName,
   parseCsvLine,
   parseFileInput,
 } from '~/utils.js';
@@ -276,5 +278,28 @@ describe('generateDownloadUrls', () => {
       'http://example.com/image1.jpg',
       'http://example.com/image2.jpg',
     ]);
+  });
+});
+
+describe('firstFreeIndex', () => {
+  it('returns 0 when the plain name is free', () => {
+    expect(firstFreeIndex(TEST_TMP_DIR, 'x', 'jpg')).toBe(0);
+  });
+
+  it('skips existing files and returns the first free index', () => {
+    fs.writeFileSync(path.join(TEST_TMP_DIR, 'x.jpg'), '');
+    fs.writeFileSync(path.join(TEST_TMP_DIR, 'x (1).jpg'), '');
+
+    expect(firstFreeIndex(TEST_TMP_DIR, 'x', 'jpg')).toBe(2);
+  });
+});
+
+describe('numberedName', () => {
+  it('keeps the plain name for index 0', () => {
+    expect(numberedName('x', 0)).toBe('x');
+  });
+
+  it('appends a numeric suffix for index greater than 0', () => {
+    expect(numberedName('x', 3)).toBe('x (3)');
   });
 });
