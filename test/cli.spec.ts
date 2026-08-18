@@ -240,6 +240,54 @@ describe('cli', () => {
     });
   });
 
+  describe('Exit codes and fatal-error halting', () => {
+    it('should reject and set exitCode 1 on a fatal input error', async () => {
+      const saved = process.exitCode;
+      process.exitCode = 0;
+      const flags: CliFlags = { header: [':'] } as CliFlags;
+      const input = [testUrl];
+
+      await expect(runner(input, flags)).rejects.toThrow(ArgumentError);
+      expect(process.exitCode).toBe(1);
+
+      process.exitCode = saved;
+    });
+
+    it('should not download remaining items after a fatal error', async () => {
+      const saved = process.exitCode;
+      process.exitCode = 0;
+      const dir = path.join(TEST_TMP_DIR, 'abort-test');
+      await fs.promises.mkdir(dir, { recursive: true });
+
+      const flags: CliFlags = {
+        dir,
+        header: [':'] as string[],
+      } as CliFlags;
+      const input = [testUrl, testUrl];
+
+      await expect(runner(input, flags)).rejects.toThrow(ArgumentError);
+
+      // No files should have been created (abort happened before any download)
+      const files = await fs.promises.readdir(dir);
+      expect(files.filter((f) => f.endsWith('.jpg')).length).toBe(0);
+
+      process.exitCode = saved;
+      await fs.promises.rm(dir, { recursive: true, force: true });
+    });
+
+    it('should set exitCode 1 when some downloads fail (non-fatal)', async () => {
+      const saved = process.exitCode;
+      process.exitCode = 0;
+      const flags: CliFlags = {} as CliFlags;
+      const input = [`${BASE_URL}/non-existent-image.jpg`];
+
+      await expect(runner(input, flags)).resolves.toBeUndefined();
+      expect(process.exitCode).toBe(1);
+
+      process.exitCode = saved;
+    });
+  });
+
   describe('SSL/TLS options', () => {
     it('should throw ArgumentError when --ca-file file does not exist', async () => {
       const flags: CliFlags = {
