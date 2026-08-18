@@ -67,6 +67,29 @@ describe('cli', () => {
     },
   );
 
+  it('should keep the full header value when it contains colons', async () => {
+    const flags: CliFlags = {
+      header: ['Referer: https://example.com/images/1.jpg'],
+    } as CliFlags;
+    const input = [testUrl];
+
+    // Capture the header as actually sent on the intercepted request.
+    let sentReferer: string | null = null;
+    const onRequest = ({ request }: { request: Request }) => {
+      if (request.url === testUrl) {
+        sentReferer = request.headers.get('Referer');
+      }
+    };
+    server.events.on('request:start', onRequest);
+
+    await expect(runner(input, flags)).resolves.toBeUndefined();
+
+    server.events.removeListener('request:start', onRequest);
+
+    expect(sentReferer).toBe('https://example.com/images/1.jpg');
+    expect(await hasErrorLogContent()).toBe(false);
+  });
+
   describe('Error handling and logging', () => {
     it('should log errors to error.log when download fails', async () => {
       const flags: CliFlags = {} as CliFlags;
