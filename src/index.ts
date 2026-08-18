@@ -8,7 +8,7 @@ import {
   ImageOptions,
   parseImageParams,
 } from './downloader.js';
-import { firstFreeIndex, numberedName } from './unique-name.js';
+import { firstFreeIndex, numberedName } from './utils.js';
 
 export type Image = {
   /**
